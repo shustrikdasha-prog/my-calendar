@@ -18,7 +18,7 @@
 
 <section class="cloud-box" id="cloudPanel" aria-label="Облачная синхронизация">
 <div class="row"><h2 style="margin:0">☁️ Мой облачный календарь</h2><span class="cloud-state" id="cloudStatus" aria-live="polite">Не подключён</span></div>
-<p class="cloud-info">Это пробное подключение. Твой прежний календарь и локальная резервная копия сохраняются. Первый перенос данных — только после твоего выбора.</p>
+<p class="cloud-info">Автоматическая синхронизация между устройствами (проверка раз в 15 секунд и при возвращении в приложение). Твой прежний календарь и локальная резервная копия сохраняются. Первый перенос данных — только после твоего выбора.</p>
 <div id="cloudSetup">
 <label>Адрес проекта Supabase<input class="cloud-input" id="cloudUrl" value="https://vtyslkyylwgxszceflzz.supabase.co" readonly></label>
 <label style="display:block;margin-top:10px">Publishable key (начинается с sb_publishable_...)<input class="cloud-input" id="cloudKey" placeholder="Вставь публичный ключ из Supabase → API Keys" autocomplete="off" spellcheck="false"></label>
@@ -28,13 +28,19 @@
 <div id="cloudAccount" hidden>
 <div id="cloudLogin">
 <div class="cloud-grid"><label>Электронная почта<input class="cloud-input" type="email" id="cloudEmail" autocomplete="email" placeholder="email@example.com"></label><label>Пароль для календаря<input class="cloud-input" type="password" id="cloudPassword" autocomplete="current-password" placeholder="Не менее 8 символов"></label></div>
-<div class="cloud-actions"><button class="btn" type="button" id="cloudSignIn">Войти</button><button class="btn alt" type="button" id="cloudSignUp">Зарегистрироваться</button></div>
+<div class="cloud-actions"><button class="btn" type="button" id="cloudSignIn">Войти</button><button class="btn alt" type="button" id="cloudSignUp">Зарегистрироваться</button><button class="btn alt" type="button" id="cloudForgot">Забыли пароль?</button></div>
 <p class="cloud-info">После регистрации подтверди почту по ссылке. Пароль не отправляется мне и не хранится в данных календаря.</p>
 </div>
 <div id="cloudSigned" hidden><p class="cloud-info">Аккаунт: <b id="cloudUser"></b></p>
-<div class="cloud-actions"><button class="btn" type="button" id="cloudPush">Перенести мои данные в облако</button><button class="btn alt" type="button" id="cloudPull">Загрузить данные из облака</button><button class="btn alt" type="button" id="cloudLogout">Выйти</button></div>
+<div class="cloud-actions"><button class="btn" type="button" id="cloudPush">Перенести мои данные в облако</button><button class="btn alt" type="button" id="cloudPull">Загрузить данные из облака</button><button class="btn alt" type="button" id="cloudRefresh">Проверить обновления</button><button class="btn alt" type="button" id="cloudLogout">Выйти</button><button class="btn alt" type="button" id="cloudChangePassword">Сменить пароль</button></div>
 <p class="cloud-info" id="cloudMigrationNote">При первом входе выбери, какую копию сохраняем. Не нажимай «Перенести», если на другом устройстве уже есть более свежие данные.</p></div>
 </div>
+<div id="cloudPasswordReset" class="card" hidden style="border:2px solid var(--accent);background:#fffaf0;margin-top:14px">
+<h3 id="cloudPasswordResetTitle">Установить новый пароль</h3>
+<p class="cloud-info">Это пароль для входа в календарь на всех устройствах. Он не сохраняется в меню и не отправляется в ChatGPT.</p>
+<div class="cloud-grid"><label>Новый пароль<input class="cloud-input" type="password" id="cloudNewPassword" autocomplete="new-password" minlength="8" placeholder="Минимум 8 символов"></label><label>Повторить новый пароль<input class="cloud-input" type="password" id="cloudRepeatPassword" autocomplete="new-password" minlength="8" placeholder="Повтори пароль"></label></div>
+<div class="cloud-actions"><button class="btn" type="button" id="cloudSavePassword">Сохранить новый пароль</button><button class="btn alt" type="button" id="cloudCancelPassword">Отмена</button></div>
+<p class="cloud-info" id="cloudPasswordMessage" role="status"></p></div>
 <p id="cloudMessage" class="cloud-info" role="status"></p>
 </section>
 <div class="notice"><b>По здоровью:</b> назначения лекарств добавляются в календарь только после твоего включения и указания даты начала. Отметка о приёме не означает рекомендацию начинать препарат. При анемии и нормальном весе дефицит калорий требует осторожности. Низкий ГИ ≠ ограничение всех углеводов до 50–60 г; диагноз по глютену остаётся неуточнённым.</div>
@@ -250,6 +256,12 @@ function renderAll(){renderCalendar();enhancedRecipes();renderShop();renderShopp
 const $=id=>document.getElementById(id), CFG='ochre_cloud_publishable_v1';
 const URL='https://vtyslkyylwgxszceflzz.supabase.co';
 let cloud=null,cloudUser=null,cloudReady=false,cloudDirty=false,saveTimer=null,busy=false,latestCloud=null;
+let cloudRevision=null, localRevision=0, syncing=false, lastCheck=0;
+let recoveryLinkSeen=(location.hash.includes('type=recovery')||new URLSearchParams(location.search).get('type')==='recovery');
+function showPasswordForm(recovery=false){$('cloudPasswordReset').hidden=false;$('cloudPasswordResetTitle').textContent=recovery?'Восстановление доступа: придумай новый пароль':'Сменить пароль';$('cloudPasswordMessage').textContent='';$('cloudPasswordReset').scrollIntoView({behavior:'smooth',block:'center'});}
+function hidePasswordForm(){if(recoveryLinkSeen)return;$('cloudPasswordReset').hidden=true;$('cloudNewPassword').value='';$('cloudRepeatPassword').value='';}
+
+const connectedMarker=id=>'ochre_cloud_synced_'+id;
 const localSave=save;
 function msg(s){$('cloudMessage').textContent=s||''}
 function status(s){$('cloudStatus').textContent=s}
@@ -264,47 +276,78 @@ try{cloud=window.supabase.createClient(URL,key,{auth:{persistSession:true,autoRe
 localStorage.setItem(CFG,key);
 cloud.auth.onAuthStateChange((evt,session)=>{
   // SDK callback must remain synchronous; schedule DB operations outside it.
-  setTimeout(()=>{if(evt==='SIGNED_OUT'){cloudReady=false;loggedIn(null);msg('Ты вышла из облачного аккаунта. Локальная копия остаётся на устройстве.')}else if(evt==='SIGNED_IN'||evt==='INITIAL_SESSION'||evt==='TOKEN_REFRESHED'){
+  setTimeout(()=>{if(evt==='PASSWORD_RECOVERY'){recoveryLinkSeen=true;loggedIn(session?.user||null);showPasswordForm(true);msg('Ссылка подтверждена. Теперь задай новый пароль в форме ниже.');}else if(evt==='SIGNED_OUT'){cloudReady=false;loggedIn(null);msg('Ты вышла из облачного аккаунта. Локальная копия остаётся на устройстве.')}else if(evt==='SIGNED_IN'||evt==='INITIAL_SESSION'||evt==='TOKEN_REFRESHED'){
     const old=cloudUser?.id;loggedIn(session?.user||null);
     if(session?.user && (!cloudReady||old!==session.user.id)) probeCloud();
   }},0);
 });
 const {data,error}=await cloud.auth.getSession();if(error)throw error;loggedIn(data.session?.user||null);
 if(data.session?.user)await probeCloud();else msg('Соединение настроено. Зарегистрируйся или войди.');
+if(recoveryLinkSeen && data.session?.user)showPasswordForm(true);
 }catch(e){cloud=null;loggedIn(null);msg('Не удалось подключиться: '+e.message)}
 }
 async function probeCloud(){if(!cloudUser||!cloud)return;try{
  const {data,error}=await cloud.from('calendar_records').select('payload,updated_at').eq('record_type','settings').eq('record_key','app_state').maybeSingle();
- if(error)throw error;latestCloud=data?.payload||null;
+ if(error)throw error;latestCloud=data?.payload||null;cloudRevision=data?.updated_at||null;
+ if(data?.payload && localStorage.getItem(connectedMarker(cloudUser.id))==='1' && !cloudReady && !cloudDirty){applyCloud(data.payload);cloudReady=true;status('Синхронизировано');msg('Актуальное меню загружено из облака автоматически.');return;}
  if(latestCloud)msg('В облаке уже есть календарь. Выбери «Загрузить данные из облака», если хочешь использовать его. Либо сознательно перезапиши облако локальной копией.');
  else msg('Облачная копия пока пуста. Нажми «Перенести мои данные в облако».');
  }catch(e){msg('Ошибка чтения облачной копии: '+e.message+'; синхронизация не включена.')}}
 function cloneState(){return JSON.parse(JSON.stringify(state))}
+function applyCloud(payload){state={...clone(base),...payload};state.favs??={};state.stock??=[];state.costs??={};localSave();renderAll()}
+async function checkCloudUpdates(){
+ if(!cloudUser||!cloud||!cloudReady||cloudDirty||busy||syncing||document.visibilityState==='hidden')return;
+ if(Date.now()-lastCheck<3500)return;lastCheck=Date.now();syncing=true;
+ try{const {data,error}=await cloud.from('calendar_records').select('payload,updated_at').eq('record_type','settings').eq('record_key','app_state').maybeSingle();
+ if(error)throw error;
+ if(data?.updated_at && data.updated_at!==cloudRevision){
+  if(cloudDirty)return;applyCloud(data.payload);cloudRevision=data.updated_at;latestCloud=data.payload;status('Синхронизировано');msg('Меню и отметки обновились с другого устройства.');
+ }
+ }catch(e){status('Проверка связи не удалась');msg('Не получилось проверить изменения: '+e.message)}finally{syncing=false}
+}
 async function push(initial=false){if(!cloudUser||!cloud||busy)return;busy=true;
-try{const snapshot=cloneState(); const {error}=await cloud.from('calendar_records').upsert({user_id:cloudUser.id,record_type:'settings',record_key:'app_state',payload:snapshot},{onConflict:'user_id,record_type,record_key'});
-if(error)throw error;cloudReady=true;cloudDirty=false;latestCloud=snapshot;status('Синхронизировано');msg(initial?'Перенос завершён. Изменения теперь сохраняются локально и в облаке.':'Изменения сохранены в облаке.');
+const revisionAtStart=localRevision;
+try{const snapshot=cloneState(); const {data,error}=await cloud.from('calendar_records').upsert({user_id:cloudUser.id,record_type:'settings',record_key:'app_state',payload:snapshot},{onConflict:'user_id,record_type,record_key'}).select('updated_at').single();
+if(error)throw error;cloudReady=true;cloudDirty=localRevision!==revisionAtStart;latestCloud=snapshot;cloudRevision=data?.updated_at||cloudRevision;localStorage.setItem(connectedMarker(cloudUser.id),'1');status(cloudDirty?'Сохранение…':'Синхронизировано');msg(initial?'Перенос завершён. Изменения теперь сохраняются локально и в облаке.':'Изменения сохранены в облаке.');
 }catch(e){cloudDirty=true;status('Не сохранено в облаке');msg('Ошибка сохранения: '+e.message+' Локальная копия осталась на устройстве. Повтори сохранение.');}
-finally{busy=false}}
+finally{busy=false;if(cloudDirty&&cloudReady){clearTimeout(saveTimer);saveTimer=setTimeout(()=>push(),500)}}}
 async function pull(){if(!cloudUser||!cloud)return;
 if(cloudDirty&&!confirm('Есть локальные изменения, которые могли не попасть в облако. Заменить их облачной копией?'))return;
 try{const {data,error}=await cloud.from('calendar_records').select('payload').eq('record_type','settings').eq('record_key','app_state').maybeSingle();if(error)throw error;
 if(!data){msg('В облаке пока нет сохранённых данных. Сначала перенеси их с основного устройства.');return}
 if(!data.payload||typeof data.payload!=='object'||!data.payload.weeks){throw Error('Облачная копия повреждена или неполная')}
 if(!confirm('Загрузить облачную копию? Локальные изменения текущего устройства будут заменены. Перед этим можно экспортировать JSON во вкладке «Данные».'))return;
-cloudReady=false;state={...clone(base),...data.payload};state.favs??={};state.stock??=[];state.costs??={};localSave();renderAll();cloudReady=true;cloudDirty=false;latestCloud=data.payload;status('Синхронизировано');msg('Данные загружены из облака.');
+cloudReady=false;applyCloud(data.payload);cloudReady=true;cloudDirty=false;latestCloud=data.payload;localStorage.setItem(connectedMarker(cloudUser.id),'1');
+const {data:meta}=await cloud.from('calendar_records').select('updated_at').eq('record_type','settings').eq('record_key','app_state').maybeSingle();cloudRevision=meta?.updated_at||null;
+status('Синхронизировано');msg('Данные загружены из облака.');
 }catch(e){msg('Не удалось загрузить: '+e.message)}}
 // Wrap legacy local save. The original calendar still works offline.
-save=function(){localSave();if(!cloudReady||!cloudUser)return;cloudDirty=true;status('Сохранение…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>push(),1300)};
+save=function(){localSave();if(!cloudReady||!cloudUser)return;localRevision++;cloudDirty=true;status('Сохранение…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>push(),1300)};
 $('cloudConnect').onclick=connect;
 $('cloudSignIn').onclick=async()=>{if(!cloud)return;const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
 if(!email||!password){msg('Введи почту и пароль.');return}msg('Входим…');const {data,error}=await cloud.auth.signInWithPassword({email,password});if(error){msg(error.message);return}loggedIn(data.user);await probeCloud()};
+$('cloudForgot').onclick=async()=>{if(!cloud)return;const email=$('cloudEmail').value.trim();if(!email){msg('Введи почту в поле выше и нажми «Забыли пароль?».');return}const {error}=await cloud.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});msg(error?'Не удалось отправить письмо: '+error.message:'Если почта зарегистрирована, письмо для сброса отправлено. Открой ссылку из письма и задай новый пароль в календаре.');};
+$('cloudChangePassword').onclick=()=>showPasswordForm(false);
+$('cloudCancelPassword').onclick=()=>{recoveryLinkSeen=false;hidePasswordForm()};
+$('cloudSavePassword').onclick=async()=>{if(!cloud||!cloudUser){$('cloudPasswordMessage').textContent='Сначала открой ссылку из письма или войди в аккаунт.';return}const a=$('cloudNewPassword').value,b=$('cloudRepeatPassword').value;
+if(a.length<8){$('cloudPasswordMessage').textContent='Пароль должен содержать не меньше 8 символов.';return}
+if(a!==b){$('cloudPasswordMessage').textContent='Пароли не совпадают.';return}
+$('cloudSavePassword').disabled=true;$('cloudPasswordMessage').textContent='Сохраняем пароль…';
+try{const {error}=await cloud.auth.updateUser({password:a});if(error)throw error;recoveryLinkSeen=false;hidePasswordForm();msg('Пароль изменён! Теперь можешь войти с телефона, используя новый пароль.');}
+catch(e){$('cloudPasswordMessage').textContent='Не удалось сменить пароль: '+e.message+' Если требуется повторная проверка личности, запроси новое письмо восстановления.'}
+finally{$('cloudSavePassword').disabled=false}
+};
 $('cloudSignUp').onclick=async()=>{if(!cloud)return;const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
 if(!email||password.length<8){msg('Введи почту и пароль длиной не менее 8 символов.');return}msg('Регистрируем…');const {data,error}=await cloud.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});if(error){msg(error.message);return}
 msg(data.session?'Аккаунт создан. Выбери копию данных.':'Письмо с подтверждением отправлено. Перейди по ссылке в письме, затем вернись в приложение.')};
 $('cloudPush').onclick=async()=>{if(!confirm('Сохранить данные ЭТОГО устройства в облако? Это заменит облачную копию, если она уже есть.'))return;await push(true)};
 $('cloudPull').onclick=pull;
+$('cloudRefresh').onclick=async()=>{if(!cloudReady){msg('Сначала загрузи или перенеси облачную копию.');return}lastCheck=0;await checkCloudUpdates();};
 $('cloudLogout').onclick=async()=>{if(!cloud)return;clearTimeout(saveTimer);cloudReady=false;const {error}=await cloud.auth.signOut();if(error)msg(error.message);loggedIn(null)};
 const key=localStorage.getItem(CFG);if(key?.startsWith('sb_publishable_')){$('cloudKey').value=key;connect()}
-window.addEventListener('online',()=>{if(cloudDirty&&cloudReady)push()});
+window.addEventListener('online',()=>{if(cloudDirty&&cloudReady)push();else checkCloudUpdates()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkCloudUpdates()});
+window.addEventListener('focus',()=>checkCloudUpdates());
+setInterval(()=>checkCloudUpdates(),15000);
 })();
 </script></body></html>
