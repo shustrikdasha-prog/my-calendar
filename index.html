@@ -111,5 +111,69 @@ renderCalendar=function(){oldRenderCalendar();let d=getDay(),cal=d.meals.reduce(
 // Автоматический подбор ккал по рецепту при замене ужина.
 function openLazyDinner(date){let d=getDay(date),list=Object.values(recipes()).filter(r=>(parseInt(r.time)||999)<=30).slice(0,40);popup('Не хочу готовить',`<p>Выбери быстрый вариант из книги рецептов (до 30 минут). Список покупок обновится. Если блюдо новое, проверь продукты дома.</p><select class="field" id="easyRecipe">${list.map(r=>`<option value="${escapes(r.id)}">${escapes(r.name)} · ≈${Math.round(nutritionOf(r).kcal)} ккал</option>`).join('')}</select><button id="modalSave" class="btn" style="margin-top:12px">Заменить ужин</button>`,()=>{let id=document.getElementById('easyRecipe').value,r=recipes()[id];if(!r)return false;let n=nutritionOf(r);d.meals[3]={title:r.name,recipeId:id,kcal:Math.round(n.kcal)};save();renderAll();return true})}
 
+
+// V7: проверка замен до сохранения. Медицинские ограничения не подменяются автоматическими диагнозами.
+const NUTRITION_RULES={dailyKcal:1600,flexKcal:1700,proteinMin:85,proteinMax:95,carbLimit:null,mealProtein:{0:15,1:22,2:0,3:20},mealMinKcal:{0:250,1:350,2:0,3:300}};
+function isChickenEggRecipe(r){return (r?.ingredients||[]).some(x=>{let z=x.toLowerCase().replace(/ё/g,'е');return /(курин\w*\s+яйц|яйц\w*\s+курин|яйцо|яйца|яиц)/.test(z)&&!/перепелин/.test(z)})}
+function analyzeReplacement(date,slot,candidate){
+ let all=getDay(date).meals.map((m,i)=>i===slot?candidate:m),r=candidate.recipeId?recipes()[candidate.recipeId]:null,n=r?nutritionOf(r):null;
+ let known=all.map(mealNutrition),fullyKnown=known.every(x=>x?.complete),total=all.reduce((a,m)=>a+mealCalories(m),0);
+ let carb=known.reduce((a,x)=>a+(x?.c||0),0),protein=known.reduce((a,x)=>a+(x?.p||0),0);
+ let warnings=[],critical=[];
+ if(!r)warnings.push('Нет рецепта и БЖУ: проверить баланс такой замены автоматически нельзя.');
+ else if(!n.complete)warnings.push('Неполный расчёт ингредиентов: '+n.unknown.slice(0,3).join(', ')+'.');
+ if(isChickenEggRecipe(r))critical.push('В рецепте могут быть куриные яйца — ты сообщала об их непереносимости. Проверь состав до выбора.');
+ if(n?.complete){
+  if(slot===1&&n.p<NUTRITION_RULES.mealProtein[slot])warnings.push('Для обеда мало белка ('+n.p.toFixed(0)+' г). Лучше добавить полноценный источник белка или выбрать другое блюдо.');
+  if(slot===3&&n.p<NUTRITION_RULES.mealProtein[slot])warnings.push('В ужине мало белка ('+n.p.toFixed(0)+' г).');
+  if(slot===0&&n.p<NUTRITION_RULES.mealProtein[slot])warnings.push('В завтраке мало белка ('+n.p.toFixed(0)+' г).');
+  if(n.kcal<NUTRITION_RULES.mealMinKcal[slot])warnings.push(slot===1?'Как единственный обед порция маловата по энергии.':'Порция может оказаться недостаточно сытной.');
+  let ing=(r.ingredients||[]).join(' ').toLowerCase();if(/пшенич|обычн.*макарон|манн|белый хлеб/.test(ing))warnings.push('Есть пшеничные/рафинированные ингредиенты: учитывай историю реакции на глютен.');
+  if(/рисов(ые|ая) хлоп|рисовая мука|сахар|мед|мёд/.test(ing))warnings.push('В составе есть продукт, который может давать высокую гликемическую нагрузку. ГИ всего блюда автоматически не известен.');
+ }
+ if(total>1700)warnings.push('Расчётная калорийность дня ≈'+Math.round(total)+' ккал — выше выбранного ориентира 1700.');
+ else if(total>1600)warnings.push('День ≈'+Math.round(total)+' ккал — выше обычной цели 1600, но в пределах выбранного гибкого ориентира 1700.');
+ if(fullyKnown){if(protein<85)warnings.push('Белка за день около '+Math.round(protein)+' г, ниже ориентировочных 85 г.');if(protein>95)warnings.push('Белка за день около '+Math.round(protein)+' г — выше ориентировочных 95 г (не обязательно нарушение).')}
+ else warnings.push('БЖУ за весь день неизвестны: есть офисные обеды или неполные рецепты. Вывод о соблюдении суточных норм сделать нельзя.');
+ return {warnings,critical,n,total,carb,protein,fullyKnown};
+}
+function candidateFromDialog(kind){
+ let date=kind==='pick'?(document.getElementById('pickDate')?.value||selected):selected;
+ let slot=kind==='pick'?Number(document.getElementById('pickSlot')?.value):kind==='easy'?3:Number(document.querySelector('#modalTitle')?.textContent?.split(' · ')[1]===slotNames[0]?0:slotNames.indexOf(document.querySelector('#modalTitle')?.textContent?.split(' · ')[1]));
+ if(!Number.isInteger(slot)||slot<0||slot>3)slot=0;
+ let id=kind==='pick'?document.querySelector('[data-pick-r].__active')?.dataset.pickR:kind==='easy'?document.getElementById('easyRecipe')?.value:document.getElementById('mealRecipe')?.value;
+ // For recipe pick, popup anchor is recorded below.
+ if(kind==='pick')id=window.__candidatePickId||id;
+ let r=id?recipes()[id]:null;
+ let kcal=r?Math.round(nutritionOf(r)?.kcal||0):Number(document.getElementById('mealKcal')?.value||document.getElementById('pickCal')?.value)||0;
+ let title=r?.name||document.getElementById('mealName')?.value||'Без названия';
+ return {date,slot,meal:{title,recipeId:id||null,kcal}};
+}
+const legacyPopup=popup;
+popup=function(title,html,onSave){
+ const kind=/^Замена блюда/.test(title)?'edit':/^Не хочу готовить/.test(title)?'easy':/^Поставить рецепт в меню/.test(title)?'pick':null;
+ if(!kind)return legacyPopup(title,html,onSave);
+ let allow=false;
+ const gatedSave=()=>{
+  let c=candidateFromDialog(kind),v=analyzeReplacement(c.date,c.slot,c.meal);
+  if(v.critical.length){alert('Перед заменой проверь состав:\n'+v.critical.join('\n'));return false}
+  if(v.warnings.length&&!allow){if(!confirm('Проверка меню:\n\n'+v.warnings.join('\n\n')+'\n\nСохранить замену, несмотря на предупреждения?'))return false;allow=true}
+  return onSave?onSave():true;
+ };
+ legacyPopup(title,html,gatedSave);
+ const saveButton=document.getElementById('modalSave');if(!saveButton)return;
+ const preview=document.createElement('div');preview.id='nutritionSafetyPreview';preview.setAttribute('aria-live','polite');preview.style.marginTop='13px';saveButton.before(preview);
+ let tick=()=>{allow=false;let c=candidateFromDialog(kind),v=analyzeReplacement(c.date,c.slot,c.meal),n=v.n;
+  preview.innerHTML=`<div class="notice" style="margin:0"><b>Проверка замены</b><p class="sub">${escapes(slotNames[c.slot])} · ${escapes(strDate(c.date))}</p>${n?`<p>Порция: ≈${Math.round(n.kcal)} ккал · Б ${n.p.toFixed(0)} г · Ж ${n.f.toFixed(0)} г · У ${n.c.toFixed(0)} г${n.complete?'':' (неполные данные)'}</p>`:'<p>Точного КБЖУ нет.</p>'}<p>После замены за день: ≈${Math.round(v.total)} ккал · учтённый белок ${Math.round(v.protein)} г · углеводы ${Math.round(v.carb)} г${v.fullyKnown?'':' (неполный итог)'}</p>${v.critical.map(x=>`<p style="color:#963e22"><b>Проверь:</b> ${escapes(x)}</p>`).join('')}${v.warnings.length?`<ul style="padding-left:19px">${v.warnings.map(x=>`<li>${escapes(x)}</li>`).join('')}</ul>`:'<p>По доступным данным явных отклонений не обнаружено.</p>'}<p class="nutrition-note">Низкий ГИ смешанного блюда не подтверждается автоматически. Строгий лимит углеводов 50–60 г не установлен: он требует уточнения, относится ли запись врача ко всем или только к отдельным углеводам.</p></div>`;
+ };
+ document.querySelectorAll('#modalBody select,#modalBody input').forEach(x=>{x.addEventListener('change',tick);x.addEventListener('input',tick)});tick();
+};
+// Capture recipe ID for adding from the cookbook (not stored in the form).
+const prevEnhancedRecipes=enhancedRecipes;
+enhancedRecipes=function(){prevEnhancedRecipes();document.querySelectorAll('[data-pick-r]').forEach(b=>{let old=b.onclick;b.onclick=e=>{window.__candidatePickId=b.dataset.pickR;old?.call(b,e)}})};
+// Example daily guidance visible without attempting to certify GI or diagnose.
+const preSafetyCalendar=renderCalendar;
+renderCalendar=function(){preSafetyCalendar();let d=getDay(),vals=d.meals.map(mealNutrition),complete=vals.every(v=>v?.complete);let totals=vals.reduce((a,v)=>({p:a.p+(v?.p||0),c:a.c+(v?.c||0)}),{p:0,c:0});let el=document.getElementById('dayMenu');let p=document.createElement('p');p.className='nutrition-note';p.innerHTML='<b>Контроль баланса:</b> '+(complete?`белок ≈${Math.round(totals.p)} г · углеводы ≈${Math.round(totals.c)} г за день.`:`не для всех блюд известны БЖУ. Для проверки замены нажми «Заменить блюдо».`)+' Ориентир по белку 85–95 г/день; преимущественно низкий ГИ. Это подсказки, а не медицинский допуск.';el.appendChild(p)};
+
 function renderAll(){renderCalendar();enhancedRecipes();renderShop();renderShoppingCalendar();renderMeds();renderToday();renderCookPlan()};renderAll();
 </script></body></html>
