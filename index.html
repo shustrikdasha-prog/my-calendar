@@ -14,11 +14,23 @@
 .cloud-box{border:1px solid #ddc9a3;border-radius:18px;padding:17px;margin:15px 0;background:#fff8ea}
 .cloud-info{font-size:13px;color:#66563b;margin-top:9px}
 .cloud-state{padding:7px 10px;background:#f5e8ca;border-radius:10px;font-weight:600;display:inline-block;margin:7px 0}
+
+/* Пока вход не подтверждён, календарь и персональные разделы не отображаются. */
+body:not(.calendar-authenticated) header,
+body:not(.calendar-authenticated) .nav,
+body:not(.calendar-authenticated) .panel,
+body:not(.calendar-authenticated) .footer,
+body:not(.calendar-authenticated) main > .notice { display:none!important; }
+body:not(.calendar-authenticated) main{max-width:720px;padding-top:clamp(26px,8vw,90px)}
+body:not(.calendar-authenticated) #cloudPanel{margin:0 auto;}
+body:not(.calendar-authenticated) #cloudPanel:before{content:'Привет, Дашка! 🧡';display:block;font-size:clamp(26px,5vw,38px);font-weight:750;color:var(--deep);margin-bottom:13px}
+body:not(.calendar-authenticated) #cloudPanel .cloud-state{display:none}
+body.calendar-authenticated #cloudPanel{margin-top:18px}
 </style></head><body><main><header><h1>Привет, Дашка!</h1><p class="lead">Здесь всё под контролем. Кроме желания съесть что-нибудь вкусное — его мы поддерживаем.</p><div class="metrics"><span class="pill">Меню на 7 дней</span><span class="pill">1600–1700 ккал — ориентир, не строгий предел</span><span class="pill">Готовка без ежедневной суеты</span></div></header>
 
 <section class="cloud-box" id="cloudPanel" aria-label="Облачная синхронизация">
 <div class="row"><h2 style="margin:0">☁️ Мой облачный календарь</h2><span class="cloud-state" id="cloudStatus" aria-live="polite">Не подключён</span></div>
-<p class="cloud-info">Автоматическая синхронизация между устройствами (проверка раз в 15 секунд и при возвращении в приложение). Твой прежний календарь и локальная резервная копия сохраняются. Первый перенос данных — только после твоего выбора.</p>
+<p class="cloud-info">Вход защищает просмотр календаря на этом устройстве. После авторизации данные синхронизируются между устройствами; резервную копию можно скачать во вкладке «Данные».</p>
 <div id="cloudSetup">
 <label>Адрес проекта Supabase<input class="cloud-input" id="cloudUrl" value="https://vtyslkyylwgxszceflzz.supabase.co" readonly></label>
 <label style="display:block;margin-top:10px">Publishable key (начинается с sb_publishable_...)<input class="cloud-input" id="cloudKey" placeholder="Вставь публичный ключ из Supabase → API Keys" autocomplete="off" spellcheck="false"></label>
@@ -265,7 +277,17 @@ const connectedMarker=id=>'ochre_cloud_synced_'+id;
 const localSave=save;
 function msg(s){$('cloudMessage').textContent=s||''}
 function status(s){$('cloudStatus').textContent=s}
-function loggedIn(user){cloudUser=user||null;$('cloudSetup').hidden=!!cloud;$('cloudAccount').hidden=!cloud;$('cloudLogin').hidden=!!user;$('cloudSigned').hidden=!user;
+function loggedIn(user){
+  document.body.classList.toggle('calendar-authenticated',!!user);
+  const panel=$('cloudPanel');
+  if(user){
+    // Настройки облака видны только во вкладке «Данные».
+    if(panel.parentElement!==$('settings')) $('settings').appendChild(panel);
+  }else{
+    // Экран входа вместо календаря — не показываем локальную копию гостю.
+    if(panel.parentElement===$('settings')) document.querySelector('main').insertBefore(panel,document.querySelector('main > .notice'));
+  }
+  cloudUser=user||null;$('cloudSetup').hidden=!!cloud;$('cloudAccount').hidden=!cloud;$('cloudLogin').hidden=!!user;$('cloudSigned').hidden=!user;
 $('cloudUser').textContent=user?.email||'';
 if(!user){cloudReady=false;status(cloud?'Нужен вход':'Не подключён')} else status(cloudReady?'Синхронизация включена':'Требуется выбор копии');
 }
