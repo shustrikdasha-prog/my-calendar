@@ -100,6 +100,50 @@ function addRecipeButtons(){
   });
  }
 }
+// Keep the factual yield editor unmistakably visible on the weekly portions card.
+// This also covers a ready batch whose original cooking record says "2" while 4 portions
+// are already in the fridge: editing 4 must not create two extra portions.
+const originalPortions1190=renderPortions;
+renderPortions=function(){
+ originalPortions1190();
+ const cards=document.getElementById('portionCards');
+ if(!cards)return;
+ const allJobs=batchesForWeek();
+ cards.querySelectorAll('.prep-meal').forEach(card=>{
+  const cookButton=card.querySelector('[data-cook-action]');
+  const job=cookButton&&allJobs.find(x=>x.key===cookButton.dataset.cookAction);
+  if(!job)return;
+  const readyRows=(state.ready||[]).filter(row=>
+   row.recipeId===job.id && Number(row.qty)>0 &&
+   (state.cookDone?.[job.key]?.created||[]).includes(row.id));
+  if(!readyRows.length)return;
+  const count=readyRows.reduce((sum,row)=>sum+Number(row.qty||0),0);
+  const existing=card.querySelector('[aria-label^="Указать фактические порции"]');
+  if(existing)existing.remove();
+  const line=document.createElement('div');line.className='flex';
+  line.style.marginTop='11px';
+  line.style.padding='10px';
+  line.style.borderRadius='12px';
+  line.style.background='var(--pale)';
+  line.innerHTML='<strong>Фактически готово: '+Math.round(count)+' порц.</strong> ';
+  const edit=document.createElement('button');
+  edit.type='button';edit.className='btn';
+  edit.textContent='Изменить количество порций';
+  edit.onclick=()=>{
+   if(readyRows.length===1){adjustReadyYield1187(readyRows[0]);return}
+   popup('Выбери контейнер','<p>Порции этой партии находятся в нескольких местах. Выбери контейнер для исправления.</p>'+
+    readyRows.map(x=>'<button type="button" class="btn alt" data-edit-container1190="'+escapes(x.id)+'">'+
+    escapes(x.place==='freezer'?'Морозилка':'Холодильник')+' · '+Math.round(Number(x.qty)||0)+' порц.</button>').join(' '),null);
+   document.querySelectorAll('#modalBody [data-edit-container1190]').forEach(b=>b.onclick=()=>{
+    const row=readyRows.find(x=>x.id===b.dataset.editContainer1190);
+    document.getElementById('modal').close();
+    if(row)adjustReadyYield1187(row);
+   });
+  };
+  line.appendChild(edit);
+  card.appendChild(line);
+ });
+};
 const oldRender=renderAutoTasks;
 renderAutoTasks=function(){oldRender();addRecipeButtons()};
 document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.0');
