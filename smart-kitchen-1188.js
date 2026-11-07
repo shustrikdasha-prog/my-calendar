@@ -134,10 +134,12 @@ function backupPanel(){
   state=backup.state;save();renderAll();alert('Локальная копия восстановлена. Проверь состояние облачной синхронизации.');
  };
 }
+const previousEnhancedRecipes1188=enhancedRecipes;
+enhancedRecipes=function(){previousEnhancedRecipes1188();ratingButtons()};
 const oldRenderAll=renderAll;
 renderAll=function(){
  oldRenderAll();
- smartPortions();dessertWeekend();pantryAudit();nutritionCheck();ratingButtons();storageHints();combinedCooking();backupPanel();
+ smartPortions();dessertWeekend();pantryAudit();nutritionCheck();storageHints();combinedCooking();backupPanel();
 };
 document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия '+VERSION);
 renderAll();
