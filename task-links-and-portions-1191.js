@@ -42,7 +42,15 @@ function fixPortionCards(){
   const total=portionsFor(done);
   const tag=card.querySelector('.tag');
   if(tag){tag.textContent=total+' порц. · факт';tag.title='Изначально планировалось: '+job.count+' порц.'}
-  card.querySelectorAll('[data-real-portions1191],#realYield1190').forEach(el=>el.remove());
+  card.querySelectorAll('[data-real-portions1191]').forEach(el=>el.remove());
+  // Remove redundant controls installed by older releases, if present.
+  card.querySelectorAll('button').forEach(b=>{
+    if(b.textContent.trim()==='Изменить порции')b.remove();
+    else if(b.textContent.trim()==='Изменить количество порций'){
+      const parent=b.parentElement;
+      if(parent?.classList.contains('flex')&&parent!==card.querySelector('[data-cook-action]')?.parentElement)parent.remove();
+    }
+  });
   const line=document.createElement('div');
   line.className='flex';line.dataset.realPortions1191='1';
   line.style.marginTop='12px';line.style.padding='11px';line.style.background='var(--pale)';line.style.borderRadius='12px';
