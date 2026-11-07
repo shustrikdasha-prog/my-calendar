@@ -118,14 +118,14 @@ renderPortions=function(){
    (state.cookDone?.[job.key]?.created||[]).includes(row.id));
   if(!readyRows.length)return;
   const count=readyRows.reduce((sum,row)=>sum+Number(row.qty||0),0);
-  const existing=card.querySelector('[aria-label^="Указать фактические порции"]');
-  if(existing)existing.remove();
+  // Avoid duplicate buttons from the previous yield editor.
+  card.querySelectorAll('button').forEach(b=>{if(b.textContent.trim()==='Изменить порции')b.remove()});
   const line=document.createElement('div');line.className='flex';
   line.style.marginTop='11px';
   line.style.padding='10px';
   line.style.borderRadius='12px';
   line.style.background='var(--pale)';
-  line.innerHTML='<strong>Фактически готово: '+Math.round(count)+' порц.</strong> ';
+  line.innerHTML='<strong>Сейчас в наличии: '+Math.round(count)+' порц.</strong> ';
   const edit=document.createElement('button');
   edit.type='button';edit.className='btn';
   edit.textContent='Изменить количество порций';
