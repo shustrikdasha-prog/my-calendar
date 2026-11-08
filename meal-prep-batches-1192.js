@@ -12,17 +12,28 @@
    {first:'2026-11-12',date:'2026-11-11',freezeDates:['2026-11-12']}
   ],
   apple_crumble_1192:[{first:'2026-11-09',date:'2026-11-08',freezeDates:[]}],
-  beef_stew_1192:[{first:'2026-11-12',date:'2026-11-11',freezeDates:['2026-11-15']}],
+  beef_stew_1192:[
+   {first:'2026-11-12',date:'2026-11-11',freezeDates:[]},
+   {first:'2026-11-15',date:'2026-11-11',freezeDates:['2026-11-15']}
+  ],
   chicken_soup_1192:[{first:'2026-11-12',date:'2026-11-11',freezeDates:[]}]
  };
  const previousBatches1192=batchesForWeek;
  function mapJobs1192(jobs){
-  return jobs.map(job=>{
+  const grouped=new Map();
+  for(const job of jobs){
    const rules=PREP[job.id],first=job.uses?.[0]?.date;
    const rule=rules?.find(x=>x.first===first);
-   if(!rule)return job;
-   return {...job,date:rule.date,freeze:job.uses.filter(u=>rule.freezeDates.includes(u.date)).length,key:'cook:'+rule.date+':'+job.id};
-  }).sort((a,b)=>a.date.localeCompare(b.date)||a.recipe.name.localeCompare(b.recipe.name,'ru'));
+   const mapped=rule?{...job,date:rule.date,freeze:job.uses.filter(u=>rule.freezeDates.includes(u.date)).length,key:'cook:'+rule.date+':'+job.id}:job;
+   const prior=grouped.get(mapped.key);
+   if(prior){
+    prior.uses.push(...mapped.uses);
+    prior.uses.sort((a,b)=>a.date.localeCompare(b.date)||a.slot-b.slot);
+    prior.count=prior.uses.length;
+    prior.freeze=prior.uses.filter(use=>PREP[prior.id]?.some(rule=>rule.date===prior.date&&rule.freezeDates.includes(use.date))).length;
+   }else grouped.set(mapped.key,{...mapped,uses:[...mapped.uses]});
+  }
+  return [...grouped.values()].sort((a,b)=>a.date.localeCompare(b.date)||a.recipe.name.localeCompare(b.recipe.name,'ru'));
  }
  batchesForWeek=function(w=current){
   const jobs=mapJobs1192(previousBatches1192(w));
