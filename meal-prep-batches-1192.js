@@ -94,5 +94,6 @@
   const lists=[deduct(all[0]),deduct(all[1])];
   return lists[batch]||[];
  };
+ document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.2');
  renderAll();
 })();
