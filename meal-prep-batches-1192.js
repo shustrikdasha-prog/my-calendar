@@ -1,110 +1,126 @@
-/* 11.9.2 — explicit prep dates and inventory-aware shopping for the Nov 9–15 plan. */
+/* 11.9.2 — agreed Nov 9–15 batch plan: two cooking days, no repeat purchases. */
 (function(){
- 'use strict';
- const PREP={
-  chicken_quinoa_1192:[{first:'2026-11-09',date:'2026-11-08',freezeDates:[]}],
-  turkey_meatballs_1192:[
-   {first:'2026-11-09',date:'2026-11-08',freezeDates:[]},
-   {first:'2026-11-15',date:'2026-11-11',freezeDates:['2026-11-15']}
-  ],
-  cottage_casserole_1192:[
-   {first:'2026-11-09',date:'2026-11-08',freezeDates:[]},
-   {first:'2026-11-12',date:'2026-11-11',freezeDates:['2026-11-12']}
-  ],
-  apple_crumble_1192:[{first:'2026-11-09',date:'2026-11-08',freezeDates:[]}],
-  beef_stew_1192:[
-   {first:'2026-11-12',date:'2026-11-11',freezeDates:[]},
-   {first:'2026-11-15',date:'2026-11-11',freezeDates:['2026-11-15']}
-  ],
-  chicken_soup_1192:[{first:'2026-11-12',date:'2026-11-11',freezeDates:[]}]
- };
- const previousBatches1192=batchesForWeek;
- function mapJobs1192(jobs){
-  const grouped=new Map();
-  for(const job of jobs){
-   const rules=PREP[job.id],first=job.uses?.[0]?.date;
-   const rule=rules?.find(x=>x.first===first);
-   const mapped=rule?{...job,date:rule.date,freeze:job.uses.filter(u=>rule.freezeDates.includes(u.date)).length,key:'cook:'+rule.date+':'+job.id}:job;
-   const prior=grouped.get(mapped.key);
-   if(prior){
-    prior.uses.push(...mapped.uses);
-    prior.uses.sort((a,b)=>a.date.localeCompare(b.date)||a.slot-b.slot);
-    prior.count=prior.uses.length;
-    prior.freeze=prior.uses.filter(use=>PREP[prior.id]?.some(rule=>rule.date===prior.date&&rule.freezeDates.includes(use.date))).length;
-   }else grouped.set(mapped.key,{...mapped,uses:[...mapped.uses]});
-  }
-  return [...grouped.values()].sort((a,b)=>a.date.localeCompare(b.date)||a.recipe.name.localeCompare(b.recipe.name,'ru'));
+'use strict';
+const WEEK='2026-11-09', SUN='2026-11-08', WED='2026-11-11';
+const PREP={
+ chicken_quinoa_1192:{date:SUN,freezeDates:[]},
+ turkey_meatballs_1192:{date:SUN,freezeDates:['2026-11-15']},
+ cottage_casserole_1192:{date:SUN,freezeDates:['2026-11-12']},
+ apple_crumble_1192:{date:SUN,freezeDates:[]},
+ beef_stew_1192:{date:WED,freezeDates:['2026-11-15']},
+ chicken_lentil_soup_1192:{date:WED,freezeDates:[]}
+};
+const originalBatches1192=batchesForWeek;
+function prepJobs1192(){
+ const all=originalBatches1192(WEEK),planned=new Map(),other=[];
+ for(const job of all){
+  const plan=PREP[job.id];
+  if(!plan){other.push(job);continue}
+  const merged=planned.get(job.id)||{...job,date:plan.date,uses:[],count:0,freeze:0,key:'cook:'+plan.date+':'+job.id};
+  merged.uses.push(...job.uses);planned.set(job.id,merged);
  }
- batchesForWeek=function(w=current){
-  const jobs=mapJobs1192(previousBatches1192(w));
-  // Surface Sunday's first prep batch on the current (Nov 2–8) calendar and Today view.
-  if(w==='2026-11-02'){
-   const upcoming=mapJobs1192(previousBatches1192('2026-11-09')).filter(j=>j.date>='2026-11-02'&&j.date<='2026-11-08');
-   return [...jobs,...upcoming].sort((a,b)=>a.date.localeCompare(b.date)||a.recipe.name.localeCompare(b.recipe.name,'ru'));
-  }
-  return jobs;
- };
- const previousNormalize1192=normalizeShopName;
- normalizeShopName=function(value){
-  const key=previousNormalize1192(value);
-  const aliases={'греческий йогурт':'йогурт','йогурт натуральный':'йогурт'};
-  return aliases[key]||key;
- };
- const VEG1192={
-  cucumber:{ingredient:'огурец',qty:120,unit:'г'},
-  tomato:{ingredient:'помидоры',qty:100,unit:'г'},
-  carrot:{ingredient:'морковь',qty:120,unit:'г'},
-  zucchini:{ingredient:'кабачок',qty:170,unit:'г'},
-  pepper:{ingredient:'сладкий перец',qty:140,unit:'г'}
- };
- function sides1192(date,slot){
-  return ((state.vegetableSides||{})[date+':'+slot]||[]).map(id=>VEG1192[id]).filter(Boolean);
+ return [...other,...[...planned.values()].map(job=>{
+  const cfg=PREP[job.id];
+  job.uses.sort((a,b)=>a.date.localeCompare(b.date)||a.slot-b.slot);
+  job.count=job.uses.length;
+  job.freeze=job.uses.filter(u=>cfg.freezeDates.includes(u.date)).length;
+  return job;
+ })].sort((a,b)=>a.date.localeCompare(b.date)||a.recipe.name.localeCompare(b.recipe.name,'ru'));
+}
+batchesForWeek=function(w=current){
+ if(w===WEEK)return prepJobs1192();
+ const old=originalBatches1192(w);
+ if(w===weekStart(SUN))return [...old,...prepJobs1192().filter(j=>j.date===SUN)];
+ return old;
+};
+const SIDE_DEFAULT1192={cucumber:50,tomato:25,cabbage:35};
+function lunchSide1192(date){
+ const saved=state.lunchVeg1192?.[date]||{};
+ return Object.fromEntries(Object.entries(SIDE_DEFAULT1192).map(([key,value])=>
+  [key,Number.isFinite(Number(saved[key]))&&Number(saved[key])>=0?Number(saved[key]):value]));
+}
+const earlierShopping1192=shopping;
+shopping=function(batch){
+ if(current!==WEEK)return earlierShopping1192(batch);
+ const stock=stockMap(),requests=[new Map(),new Map()];
+ function add(index,name,unit,amount){
+  if(!name||!Number.isFinite(amount)||amount<=0||unit==='порция'||
+     /^(вода|соль|зелень|ваниль|укроп|специи)/i.test(name))return;
+  const key=normalizeShopName(name)+'|'+unit;
+  const row=requests[index].get(key)||{name:normalizeShopName(name),unit,qty:0};
+  row.qty+=amount;requests[index].set(key,row);
  }
- const previousShopping1192=shopping;
- shopping=function(batch){
-  // The legacy early-start week keeps its Fri–Sun-only purchase window.
-  const week=getWeek(),stock=stockMap(),all=[new Map(),new Map()];
-  const covered=new Set(),allocated=new Map();
-  for(const job of batchesForWeek()){
-   const done=state.cookDone?.[job.key];if(!done)continue;
-   for(const use of (job.uses||[]).slice(0,Number(done.count)||0)){
-    covered.add(mealKey(use.date,use.slot));
-    allocated.set(job.id,(allocated.get(job.id)||0)+1);
-   }
-  }
-  const prepared=new Map();
-  for(const row of state.ready||[])if(row.recipeId&&Number(row.qty)>0)prepared.set(row.recipeId,(prepared.get(row.recipeId)||0)+Number(row.qty));
-  for(const [id,count] of allocated)prepared.set(id,Math.max(0,(prepared.get(id)||0)-count));
-  week.days.forEach((day,i)=>{
-   const b=state.kickoffPlanV113&&current==='2026-11-02'?(i>=4?0:-1):(i<3?0:1);
-   if(b<0)return;
-   day.meals.forEach((meal,slot)=>{
-    const key=mealKey(day.date,slot);
-    if(meal.outside||isDone(key))return;
-    const recipe=meal.recipeId?recipes()[meal.recipeId]:null;
-    const mealCovered=!!meal.readyId||covered.has(key);
-    if(recipe&&!mealCovered){
-     if((prepared.get(recipe.id)||0)>0)prepared.set(recipe.id,prepared.get(recipe.id)-1);
-     else for(const item of editableIngredients(recipe,1)){
-      const k=namedUnit(item.name,item.unit),row=all[b].get(k)||{name:item.name,qty:0,unit:item.unit};
-      row.qty+=item.qty;all[b].set(k,row);
-     }
-    }
-    // Fresh sides remain on the list even when the main meal is already batch-cooked.
-    for(const item of sides1192(day.date,slot)){
-     const k=namedUnit(item.ingredient,item.unit),row=all[b].get(k)||{name:item.ingredient,qty:0,unit:item.unit};
-     row.qty+=item.qty;all[b].set(k,row);
-    }
-   });
-  });
-  const deduct=map=>[...map.values()].map(item=>{
-   const k=namedUnit(item.name,item.unit),left=stock.get(k)||0,used=Math.min(left,item.qty);
-   stock.set(k,roundQ(left-used));
-   return {...item,qty:roundQ(item.qty-used)};
-  }).filter(item=>item.qty>.001);
-  const lists=[deduct(all[0]),deduct(all[1])];
-  return lists[batch]||[];
- };
- document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.2');
- renderAll();
+ const recipesForWeek=recipes();
+ for(const job of prepJobs1192()){
+  const index=job.date===SUN?0:1;
+  if(state.cookDone?.[job.key])continue;
+  for(const item of editableIngredients(job.recipe,job.count))add(index,item.name,item.unit,item.qty);
+ }
+ // Quick recipes are prepared/assembled without a batch-cooking task.
+ for(const [id,number] of [['overnight_oats_1192',3],['greek_snack_1192',4]]){
+  const recipe=recipesForWeek[id];if(!recipe)continue;
+  for(const item of editableIngredients(recipe,number))add(1,item.name,item.unit,item.qty);
+ }
+ // Fresh vegetable boxes are independent of the cooked main meal.
+ let totalCabbage=0;
+ getWeek(WEEK).days.forEach((day,i)=>{
+  const v=lunchSide1192(day.date),idx=i<3?0:1;
+  add(idx,'Огурец','г',v.cucumber);add(idx,'Помидоры','г',v.tomato);
+  totalCabbage+=v.cabbage;
+ });
+ add(0,'Капуста','г',totalCabbage);
+ const deduct=items=>[...items.values()].map(item=>{
+  const key=normalizeShopName(item.name)+'|'+item.unit,remaining=stock.get(key)||0;
+  const used=Math.min(remaining,item.qty);stock.set(key,Math.max(0,remaining-used));
+  return {...item,qty:Math.round((item.qty-used)*10)/10};
+ }).filter(item=>item.qty>0.01).sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+ const first=deduct(requests[0]),second=deduct(requests[1]);
+ return batch===0?first:second;
+};
+const earlierRenderCalendar1192=renderCalendar;
+renderCalendar=function(){
+ earlierRenderCalendar1192();
+ if(current!==WEEK)return;
+ const host=document.getElementById('dayMenu');if(!host)return;
+ // Old generic vegetable side box assumed portions of 120g + 100g.
+ host.querySelectorAll('.veg-add-on').forEach(node=>node.remove());
+ const lunch=host.querySelectorAll('.meal')[1];
+ if(lunch){
+  const v=lunchSide1192(selected);
+  const line=document.createElement('div');line.className='veg-add-on';
+  line.style.cssText='margin:8px 0;padding:9px 11px;background:#f5e8d4;border-radius:12px;font-size:13px';
+  line.textContent='Овощной контейнер 240 мл: огурец '+v.cucumber+' г, помидоры '+v.tomato+' г, капуста '+v.cabbage+' г. ';
+  const edit=document.createElement('button');
+  edit.type='button';edit.className='link';edit.textContent='Изменить';
+  edit.onclick=()=>{
+   const values=lunchSide1192(selected);
+   popup('Овощи на один обед',
+    '<p class="sub">Контейнер 240 мл. Укажи сколько граммов каждого продукта нарезать: список покупок пересчитается автоматически.</p>'+
+    [['cucumber','Огурец'],['tomato','Помидоры'],['cabbage','Капуста']].map(([id,label])=>
+      '<label>'+label+' (г)<input class="field" type="number" min="0" max="240" step="5" id="side1192_'+id+'" value="'+values[id]+'"></label>').join('')+
+    '<button type="button" id="modalSave" class="btn">Сохранить</button>',()=>{
+      const next=Object.fromEntries(Object.keys(SIDE_DEFAULT1192).map(key=>
+       [key,Number(document.getElementById('side1192_'+key).value)]));
+      if(Object.values(next).some(v=>!Number.isFinite(v)||v<0||v>240)||
+         Object.values(next).reduce((a,b)=>a+b,0)>220){alert('Для контейнера 240 мл укажи суммарно не более 220 г овощей.');return false}
+      state.lunchVeg1192??={};state.lunchVeg1192[selected]=next;
+      save();renderAll();return true;
+    });
+  };
+  line.appendChild(edit);lunch.querySelector('.fill')?.appendChild(line);
+ }
+ const note=document.createElement('p');note.id='mealPrepHint1192';note.className='sub';
+ note.textContent='Обеды приготовлены заранее: основной контейнер 500 мл и овощной 240 мл. Готовки — вс 8.11 и ср 11.11. Калорийность ориентировочная: в некоторые дни базовое меню может быть недостаточным, поэтому ориентируйся на голод и добавляй готовые перекусы.';
+ host.appendChild(note);
+};
+const earlierRenderShop1192=renderShop;
+renderShop=function(){
+ earlierRenderShop1192();
+ if(current!==WEEK)return;
+ const p=document.createElement('p');p.className='sub';
+ p.textContent='Закупка №1 — перед готовкой 8 ноября; закупка №2 — перед готовкой 11 ноября. Крупы и овощи из домашних запасов не добавляются повторно. Красную чечевицу удобнее купить маленькой упаковкой.';
+ document.getElementById('shopProgress')?.appendChild(p);
+};
+document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.2');
+renderAll();
 })();
