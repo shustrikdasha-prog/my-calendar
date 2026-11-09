@@ -1148,6 +1148,8 @@ setStatus();
 const $=id=>document.getElementById(id), CFG='ochre_cloud_publishable_v1';
 const URL='https://vtyslkyylwgxszceflzz.supabase.co';
 let cloud=null,cloudUser=null,cloudReady=false,cloudDirty=false,saveTimer=null,busy=false,latestCloud=null;
+// Read-only bridge for standalone notification module (cloud variables are scoped to this IIFE).
+window.chtoPoestCloudBridge={getClient:()=>cloud,getUser:()=>cloudUser};
 let cloudRevision=null, localRevision=0, syncing=false, lastCheck=0;
 let recoveryLinkSeen=(location.hash.includes('type=recovery')||new URLSearchParams(location.search).get('type')==='recovery');
 function showPasswordForm(recovery=false){$('cloudPasswordReset').hidden=false;$('cloudPasswordResetTitle').textContent=recovery?'Восстановление доступа: придумай новый пароль':'Сменить пароль';$('cloudPasswordMessage').textContent='';$('cloudPasswordReset').scrollIntoView({behavior:'smooth',block:'center'});}
