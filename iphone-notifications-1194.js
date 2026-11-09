@@ -1,4 +1,4 @@
-/* 11.9.4 — iPhone push permission/subscription setup.
+/* 11.9.5 — iPhone scheduled push dispatch.
    Scheduled backend dispatch runs once per minute via Supabase. */
 (function(){
 'use strict';
@@ -76,6 +76,6 @@ renderMeds=function(){prevRender();panel()};
 worker().catch(()=>{});
 const oldAll=renderAll;
 renderAll=function(){oldAll();panel()};
-document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.4');
+document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.5');
 renderAll();
 })();
