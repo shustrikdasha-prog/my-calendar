@@ -1,7 +1,7 @@
-/* 11.9.2 — agreed Nov 9–15 batch plan: two cooking days, no repeat purchases. */
+/* 11.9.2 — agreed Nov 9–15 batch plan: two cooking days (Mon and Wed), no repeat purchases. */
 (function(){
 'use strict';
-const WEEK='2026-11-09', SUN='2026-11-08', WED='2026-11-11';
+const WEEK='2026-11-09', SUN='2026-11-09', WED='2026-11-11';
 const PREP={
  chicken_quinoa_1192:{date:SUN,freezeDates:[]},
  turkey_meatballs_1192:{date:SUN,freezeDates:['2026-11-15']},
@@ -110,7 +110,7 @@ renderCalendar=function(){
   line.appendChild(edit);lunch.querySelector('.fill')?.appendChild(line);
  }
  const note=document.createElement('p');note.id='mealPrepHint1192';note.className='sub';
- note.textContent='Обеды приготовлены заранее: основной контейнер 500 мл и овощной 240 мл. Готовки — вс 8.11 и ср 11.11. Калорийность ориентировочная: в некоторые дни базовое меню может быть недостаточным, поэтому ориентируйся на голод и добавляй готовые перекусы.';
+ note.textContent='Обеды приготовлены заранее: основной контейнер 500 мл и овощной 240 мл. Готовки — пн 9.11 и ср 11.11. Калорийность ориентировочная: в некоторые дни базовое меню может быть недостаточным, поэтому ориентируйся на голод и добавляй готовые перекусы.';
  host.appendChild(note);
 };
 const earlierRenderShop1192=renderShop;
@@ -118,7 +118,7 @@ renderShop=function(){
  earlierRenderShop1192();
  if(current!==WEEK)return;
  const p=document.createElement('p');p.className='sub';
- p.textContent='Закупка №1 — перед готовкой 8 ноября; закупка №2 — перед готовкой 11 ноября. Крупы и овощи из домашних запасов не добавляются повторно. Красную чечевицу удобнее купить маленькой упаковкой.';
+ p.textContent='Закупка №1 — перед готовкой вечером 9 ноября; закупка №2 — перед готовкой 11 ноября. Крупы и овощи из домашних запасов не добавляются повторно. Красную чечевицу удобнее купить маленькой упаковкой.';
  document.getElementById('shopProgress')?.appendChild(p);
 };
 document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.2');
