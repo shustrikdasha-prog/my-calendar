@@ -1,8 +1,8 @@
 /* 11.9.4 — iPhone push permission/subscription setup.
-   This does not claim that scheduled backend delivery is active. */
+   Scheduled backend dispatch runs once per minute via Supabase. */
 (function(){
 'use strict';
-const VAPID='BMvivZSLVLx6n7GK5edCNhkgukjqdAVoV_bMdFbYWRwTciuOW7dmz81z83UOLANxFPP2I6Mzl0FL14XKd6Umv0o';
+const VAPID='BHKIyvmIuEuInpBkr2wkpTU2fG63-Jzzi8qmRg8lX2OZ0sPUS7QYhJjik2OYROIeUJDjR9i_yvR2tAwbR3COGFE';
 function b64(s){const p='='.repeat((4-s.length%4)%4);return Uint8Array.from(atob((s+p).replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))}
 let registrationPromise=null;
 function worker(){
@@ -38,7 +38,7 @@ function panel(){
  if(!box){box=document.createElement('section');box.className='card';box.id='pushPanel1194';host.insertAdjacentElement('afterend',box)}
  const support=('Notification'in window)&&('PushManager'in window)&&('serviceWorker'in navigator);
  box.innerHTML='<h3>Напоминания на iPhone</h3>'+
- '<p class="sub">Настраиваем системные push-уведомления. Подписка телефона уже может быть сохранена, но автоматическая серверная отправка по расписанию пока не подключена — эти настройки не заменяют будильник или напоминания в «Здоровье».</p>'+
+ '<p class="sub">Настраиваем системные push-уведомления. Подписка телефона уже может быть сохранена, и серверная отправка подключена. Для важных лекарств сохраняй резервные напоминания в «Здоровье» на случай задержки доставки.</p>'+
  '<p class="sub">Время берётся из каждого активного назначения. Для изменения времени открой лекарство выше. Чтобы push приходил при закрытом приложении, его нужно добавить на экран «Домой» и разрешить уведомления.</p>'+
  '<div class="flex"><button class="btn" id="pushEnable1194">Разрешить уведомления</button><button class="btn alt" id="pushTest1194">Проверить на этом iPhone</button><button class="btn alt" id="pushSync1194">Обновить расписание</button></div>'+
  '<p id="pushStatus1194" class="sub" role="status" style="margin-top:12px"></p>'+
@@ -47,7 +47,7 @@ function panel(){
  '</div></details>';
  const status=t=>{const x=document.getElementById('pushStatus1194');if(x)x.textContent=t};
  if(!support){status('Этот режим браузера не поддерживает Web Push. Открой приложение с домашнего экрана iPhone (iOS 16.4+).');return}
- status('Статус разрешения: '+Notification.permission+'. Серверные уведомления пока не активированы.');
+ status('Статус разрешения: '+Notification.permission+'. Серверные напоминания включены после подписки телефона.');
  document.getElementById('pushEnable1194').onclick=async()=>{
   try{
    if(!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)
@@ -55,19 +55,20 @@ function panel(){
    const reg=await worker();
    const permission=await Notification.requestPermission();
    if(permission!=='granted')throw Error('iPhone не разрешил уведомления. Проверь Настройки → Уведомления.');
+   const previous=await reg.pushManager.getSubscription();if(previous)await previous.unsubscribe();
    await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(VAPID)});
    await syncPush();
-   status('Разрешение получено, iPhone и расписание сохранены. Автоматическая отправка по времени пока не включена.');
+   status('Разрешение получено, телефон подписан на автоматические напоминания. Доставка зависит от связи и настроек iOS.');
   }catch(e){status(e.message||String(e))}
  };
  document.getElementById('pushTest1194').onclick=async()=>{
   try{if(Notification.permission!=='granted')throw Error('Сначала разреши уведомления.');
-   const reg=await worker();await reg.showNotification('Что поесть? — тест',{body:'Это проверка уведомления на этом iPhone. Запланированные push ещё не активированы.',icon:'./app-icon.svg',tag:'med-test'});
-   status('Тестовое уведомление показано. Оно не проверяет доставку из облака.');
+   const reg=await worker();await reg.showNotification('Что поесть? — тест',{body:'Это проверка уведомления на этом iPhone. Запланированные push отправляются сервером по расписанию.',icon:'./app-icon.svg',tag:'med-test'});
+   status('Тестовое уведомление показано. Оно проверяет только разрешение iOS; доставка из облака проверяется ближайшим запланированным приёмом.');
   }catch(e){status(e.message||String(e))}
  };
  document.getElementById('pushSync1194').onclick=async()=>{
-  try{await syncPush();status('Расписание сохранено в облаке. Отправка по времени пока не подключена.')}catch(e){status(e.message||String(e))}
+  try{await syncPush();status('Расписание сохранено в облаке для автоматической отправки.')}catch(e){status(e.message||String(e))}
  };
 }
 const prevRender=renderMeds;
