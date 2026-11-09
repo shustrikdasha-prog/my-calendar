@@ -1,4 +1,4 @@
-/* 11.9.5 — iPhone scheduled push dispatch.
+/* 11.9.6 — iPhone scheduled push dispatch.
    Scheduled backend dispatch runs once per minute via Supabase. */
 (function(){
 'use strict';
@@ -18,7 +18,7 @@ function plans(){
  });
 }
 async function syncPush(){
- if(typeof cloud==='undefined'||!cloud||typeof cloudUser==='undefined'||!cloudUser)throw Error('Сначала войди в облачный аккаунт в настройках приложения.');
+ const bridge=window.chtoPoestCloudBridge; const cloud=bridge?.getClient?.(); const cloudUser=bridge?.getUser?.(); if(!cloud||!cloudUser)throw Error('Не удалось прочитать облачный вход. Открой «Настройки» → «Облако» и проверь подключение.');
  const reg=await worker();
  const subscription=await reg.pushManager.getSubscription();
  if(!subscription)throw Error('Подписка iPhone не найдена. Нажми «Разрешить уведомления».');
@@ -76,6 +76,6 @@ renderMeds=function(){prevRender();panel()};
 worker().catch(()=>{});
 const oldAll=renderAll;
 renderAll=function(){oldAll();panel()};
-document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.5');
+document.querySelectorAll('.footer').forEach(el=>el.textContent='Версия 11.9.6');
 renderAll();
 })();
