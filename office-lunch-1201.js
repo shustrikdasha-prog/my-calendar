@@ -20,6 +20,7 @@ function setMode(date,next){
  state.lunchMode1201??={};
  const prev=state.lunchMode1201[date]||{},was=readMode(date);
  if(was===next)return;
+ if(window.chtoPoestTransfer1202?.beforeModeChange&&!window.chtoPoestTransfer1202.beforeModeChange(date,next))return;
  const previousMeal=prev.original;
  // A prepared batch is real food: switching plans must not undo cooking or add stock.
  if(next==='buy'&&meal.recipeId){
