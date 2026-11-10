@@ -51,9 +51,10 @@ shopping=function(batch){
   row.qty+=amount;requests[index].set(key,row);
  }
  const recipesForWeek=recipes();
- for(const job of prepJobs1192()){
+ for(const job of batchesForWeek(WEEK)){
   const index=job.date===SUN?0:1;
   if(state.cookDone?.[job.key])continue;
+  // Uses reflect only lunches still planned at home or in a container.
   for(const item of editableIngredients(job.recipe,job.count))add(index,item.name,item.unit,item.qty);
  }
  // Quick recipes are prepared/assembled without a batch-cooking task.
@@ -64,6 +65,9 @@ shopping=function(batch){
  // Fresh vegetable boxes are independent of the cooked main meal.
  let totalCabbage=0;
  getWeek(WEEK).days.forEach((day,i)=>{
+  const specified=state.lunchMode1201?.[day.date]?.mode;
+  const useBox=specified==='container'||(!specified&&/контейнер/i.test(day.meals?.[1]?.title||''));
+  if(!useBox)return;
   const v=lunchSide1192(day.date),idx=i<3?0:1;
   add(idx,'Огурец','г',v.cucumber);add(idx,'Помидоры','г',v.tomato);
   totalCabbage+=v.cabbage;
