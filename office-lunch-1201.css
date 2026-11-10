@@ -1,0 +1,19 @@
+/* 11.10.1 — lunch mode selector, matches cozy mobile dashboard */
+.lunch-panel1201{margin:10px 0 18px;padding:17px 18px;background:#fff7ea;border:1px solid #eadbc7;border-radius:18px;color:#4b3529}
+.lunch-header1201{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.lunch-header1201 strong{font-size:15px;letter-spacing:-.02em}
+.lunch-header1201 span{font-size:11px;color:#957759}
+.lunch-options1201{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.lunch-options1201 button{border:1px solid #dfccbb;border-radius:13px;padding:12px 6px;min-height:55px;background:#fffcf5;color:#725942;font-size:12px;line-height:1.25;font-weight:750;cursor:pointer}
+.lunch-options1201 button.active{background:#52392e;color:#fffdf8;border-color:#52392e}
+.lunch-description1201{font-size:12px;color:#806b55;line-height:1.5;margin:12px 0 0}
+.lunch-fact1201{display:inline-block;margin-top:10px;background:#f0d7b7;border:0;border-radius:99px;padding:10px 13px;font-size:12px;font-weight:850;color:#5a3b2a}
+.lunch-light1201{font-size:11px;color:#aa8e73;margin:9px 0 0}
+#dayMenu>.lunch-panel1201{margin:6px 0 15px}
+#dashboard1198 .lunch-panel1201{margin:0 0 8px;grid-column:1 / -1}
+@media(max-width:760px){
+.lunch-panel1201{padding:14px 12px;border-radius:16px}
+.lunch-options1201 button{padding:9px 4px;font-size:11px;min-height:52px}
+.lunch-header1201 strong{font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){.lunch-options1201 button{transition:none}}
