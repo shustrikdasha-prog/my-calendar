@@ -90,3 +90,10 @@
 .k-legacy1199>summary{cursor:pointer;font-size:13px;font-weight:850;color:#7a563b;padding:3px 0;list-style-position:inside}
 .k-legacy1199[open]>summary{margin-bottom:17px}
 @media(max-width:760px){.k-week1199 button{padding:9px 11px;font-size:11px}.k-week1199 strong{font-size:12px}.k-legacy1199{padding:12px}}
+
+/* v11.10.0 • parallel cooking planner */
+.k-flow-time1200{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;margin:13px 0 20px;padding:14px 16px;background:#eaf1df;border-radius:15px;color:#4e6243}
+.k-flow-time1200 b{font-size:12px;white-space:nowrap}
+.k-flow-time1200 span{font-size:12px;line-height:1.5}
+.k-switch-tip1200{margin:16px 0 0!important;padding:12px 14px;background:#fff9ed;border-left:3px solid #dbaa61;border-radius:8px;color:#806143!important;font-size:12px!important;line-height:1.5!important}
+@media(max-width:760px){.k-flow-time1200{grid-template-columns:1fr;gap:5px;padding:12px 13px}}
