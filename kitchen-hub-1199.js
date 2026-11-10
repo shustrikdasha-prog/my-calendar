@@ -1,4 +1,4 @@
-/* 11.9.9 — kitchen overview, virtual fridge and shared cooking session.
+/* 11.10.0 — kitchen overview, virtual fridge and shared cooking session.
    All stock debits/credits and ready-meal edits are delegated to existing handlers. */
 (function(){
 'use strict';
@@ -93,30 +93,54 @@ function renderCook(){
   '<div class="k-actions1199"><button type="button" data-k-recipe="'+esc(j.id)+'">Посмотреть рецепт</button><button type="button" data-k-finish="'+esc(j.key)+'" class="k-primary1199">'+(isDone?'✓ Приготовлено':'Отметить готовку')+'</button></div></article>';
  }).join('')+'</div>':'');
 }
+// Smart workflow alternates dishes while strictly preserving every recipe's own order.
 function sessionSteps(jobs){
- const s=[];
- if(!jobs.length)return s;
- s.push({title:'Подготовить рабочее место',description:'Проверь ингредиенты всех блюд, посуду и свободные контейнеры. Рецептурные количества доступны по кнопкам ниже.'});
- for(const j of jobs){
-  const steps=Array.isArray(j.recipe.steps)?j.recipe.steps:[];
-  if(steps.length){
-   for(let i=0;i<steps.length;i++)s.push({title:j.recipe.name+' · шаг '+(i+1),description:steps[i],recipeId:j.id});
-  }else s.push({title:'Приготовить '+j.recipe.name,description:'У этого рецепта пока нет пошагового описания. Открой полный рецепт.',recipeId:j.id});
+ const result=[{title:'Подготовь рабочее место',description:'Проверь ингредиенты и посуду для всех блюд. Для сырого мяса используй отдельный инвентарь и мой руки и поверхности.',kind:'setup'}];
+ const sets=jobs.map(j=>({j,steps:Array.isArray(j.recipe.steps)&&j.recipe.steps.length?j.recipe.steps:['Открой полный рецепт: шаги приготовления пока не указаны.']}));
+ for(let i=0;i<Math.max(...sets.map(x=>x.steps.length));i++)
+  for(const {j,steps} of sets){
+   if(i>=steps.length)continue;
+   const description=steps[i];
+   const kind=/духовк|запека|выпека|вари|варить|туши|тушить|кипят|на огне|доведи до кип|жарь|жарить|обжар/i.test(description)?'heat':'prep';
+   result.push({title:j.recipe.name+' · шаг '+(i+1),description,recipeId:j.id,kind});
+  }
+ result.push({title:'Охлади и разложи порции',description:'Охлади приготовленные блюда в неглубоких контейнерах, своевременно убери в холодильник или морозилку. Для офиса: основной контейнер 500 мл и овощной 240 мл. Учитывай фактический срок хранения.',kind:'store'});
+ return result;
+}
+function cookingTimeInfo(jobs){
+ const durations=jobs.map(j=>{
+  const t=String(j.recipe.time||''),range=t.match(/(\d+)\s*[–-]\s*(\d+)/),single=t.match(/(\d+)\s*(мин|час)/i);
+  return range?Number(range[2]):single?Number(single[1])*(/час/i.test(single[2])?60:1):null;
+ });
+ const known=durations.filter(Number.isFinite);
+ if(!known.length)return 'Время не указано в рецептах.';
+ const total=known.reduce((a,b)=>a+b,0);
+ return 'Сумма времени '+known.length+' рецептов: '+total+' мин при готовке по очереди. При параллельной готовке возможно быстрее; это не таймер и не гарантия.';
+}
+function flowId(jobs){return sessionDate+'|'+jobs.map(j=>j.key).sort().join('|')}
+let currentFlow='';
+function restoreSteps(jobs){
+ const key=flowId(jobs);
+ if(currentFlow!==key){
+  currentFlow=key;sessionStep=0;
+  const stored=state.kitchenFlow1200?.[key];
+  checkedSteps=new Set(Array.isArray(stored)?stored.filter(x=>Number.isInteger(x)&&x>=0):[]);
  }
- s.push({title:'Охладить и разложить по контейнерам',description:'Не оставляй готовую еду надолго при комнатной температуре. Раздели на порции; для офиса используй основной контейнер 500 мл и отдельный овощной 240 мл. Замораживай только подходящие блюда.'});
- return s;
 }
 function renderSession(){
  const jobs=dateJobs().filter(j=>j.date===sessionDate&&!state.cookDone?.[j.key]);
  const steps=sessionSteps(jobs);
+ restoreSteps(jobs);
  if(!jobs.length)return '<div class="k-empty1199"><h3>Все блюда этого дня уже отмечены приготовленными</h3><p>Порции находятся в виртуальном холодильнике. Если отметка была ошибочной, исправь её в плане готовки ниже.</p><button type="button" data-k-back>Вернуться к плану</button></div>';
  sessionStep=Math.min(Math.max(0,sessionStep),steps.length-1);
- const step=steps[sessionStep],pct=Math.round(100*checkedSteps.size/steps.length);
+ const step=steps[sessionStep],pct=Math.round(100*[...checkedSteps].filter(x=>x<steps.length).length/steps.length);
  return '<div class="k-session1199"><div class="k-session-top1199"><button type="button" data-k-back>← К плану</button><span>'+esc(dateFmt(sessionDate))+'</span></div>'+
- '<h3>Готовим вместе</h3><p class="k-muted1199">Это единый чек-лист по существующим рецептам, а не оптимизированный тайминг параллельной готовки. Можно переходить между шагами в любом порядке.</p>'+
+ '<h3>Готовим вместе</h3><p class="k-muted1199">Шаги разных блюд чередуются, но порядок каждого рецепта сохранён. Не оставляй нагрев без присмотра.</p>'+
+ '<div class="k-flow-time1200"><b>Оценка времени</b><span>'+esc(cookingTimeInfo(jobs))+'</span></div>'+ 
  '<div class="k-session-progress1199"><div class="k-progress-bar1199"><i style="width:'+pct+'%"></i></div><span>'+checkedSteps.size+' / '+steps.length+' шагов</span></div>'+
- '<div class="k-session-card1199"><small>ШАГ '+(sessionStep+1)+' ИЗ '+steps.length+'</small><h4>'+esc(step.title)+'</h4><p>'+esc(step.description)+'</p>'+
+ '<div class="k-session-card1199"><small>ШАГ '+(sessionStep+1)+' ИЗ '+steps.length+(step.kind==='heat'?' · ТЕРМООБРАБОТКА':'')+'</small><h4>'+esc(step.title)+'</h4><p>'+esc(step.description)+'</p>'+
  (step.recipeId?'<button type="button" class="k-link1199" data-k-recipe="'+esc(step.recipeId)+'">Открыть полный рецепт →</button>':'')+
+ (step.kind==='heat'?'<p class="k-switch-tip1200">Пока блюдо готовится, можно заняться другим рецептом, только если это безопасно и нагрев остаётся под контролем.</p>':'')+
  '<label class="k-stepcheck1199"><input type="checkbox" data-k-step="'+sessionStep+'" '+(checkedSteps.has(sessionStep)?'checked':'')+'> Этот шаг выполнен</label></div>'+
  '<div class="k-session-controls1199"><button type="button" data-k-prev '+(sessionStep===0?'disabled':'')+'>← Назад</button><button type="button" data-k-next '+(sessionStep===steps.length-1?'disabled':'')+'>Далее →</button></div>'+
  '<div class="k-session-finish1199"><h4>Готовые блюда</h4><p>Отмечай готовку только после фактического приготовления: стандартное окно уточнит количество порций и сколько заморозить.</p>'+
@@ -139,7 +163,7 @@ function renderKitchen(){
  root.querySelectorAll('[data-k-back]').forEach(b=>b.onclick=()=>{view='cook';renderKitchen()});
  root.querySelectorAll('[data-k-prev]').forEach(b=>b.onclick=()=>{sessionStep--;renderKitchen()});
  root.querySelectorAll('[data-k-next]').forEach(b=>b.onclick=()=>{sessionStep++;renderKitchen()});
- root.querySelectorAll('[data-k-step]').forEach(input=>input.onchange=()=>{const n=Number(input.dataset.kStep);if(input.checked)checkedSteps.add(n);else checkedSteps.delete(n);renderKitchen()});
+ root.querySelectorAll('[data-k-step]').forEach(input=>input.onchange=()=>{const n=Number(input.dataset.kStep);if(input.checked)checkedSteps.add(n);else checkedSteps.delete(n);state.kitchenFlow1200??={};const active=dateJobs().filter(j=>j.date===sessionDate&&!state.cookDone?.[j.key]);state.kitchenFlow1200[flowId(active)]=[...checkedSteps];save();renderKitchen()});
  root.querySelectorAll('[data-k-finish]').forEach(b=>b.onclick=()=>{
   const job=dateJobs().find(j=>j.key===b.dataset.kFinish);
   if(!job)return;
@@ -151,6 +175,6 @@ function renderKitchen(){
 }
 const allBeforeKitchen=renderAll;
 renderAll=function(){allBeforeKitchen();renderKitchen()};
-document.querySelectorAll('.footer').forEach(e=>e.textContent='Версия 11.9.9');
+document.querySelectorAll('.footer').forEach(e=>e.textContent='Версия 11.10.0');
 renderKitchen();
 })();
