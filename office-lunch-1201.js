@@ -76,11 +76,10 @@ function attach(host,date,context){
   document.querySelector('[data-tab="calendar"]')?.click();
   renderAll();
   // Existing actual-meal editor supports title and full KБЖУ without inventing values.
-  const btn=document.querySelector('#dayMenu [data-actual-meal="1"],#dayMenu [data-actual="1"]');
+  const row=document.querySelectorAll('#dayMenu .meal')[1];
+  const btn=[...(row?.querySelectorAll('button')||[])].find(x=>/Факт\s*\/\s*КБЖУ|Изменить факт/i.test(x.textContent));
   if(btn)btn.click();
-  else{
-   alert('Открой этот обед в меню дня и выбери «Факт / КБЖУ» для записи купленного блюда.');
-  }
+  else alert('Открой этот обед в меню дня и выбери «Факт / КБЖУ» для записи купленного блюда.');
  });
 }
 const prevCal=renderCalendar;
