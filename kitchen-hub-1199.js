@@ -27,6 +27,15 @@ if(!root){
  root.id='kitchen1199';root.className='kitchen1199';
  kitchen.insertBefore(root,kitchen.querySelector('.feature-heading'));
 }
+// Keep legacy weekly cards and yield corrections accessible without crowding the new screen.
+let legacy=el('kitchenLegacy1199');
+if(!legacy){
+ legacy=document.createElement('details');legacy.id='kitchenLegacy1199';legacy.className='k-legacy1199';
+ const summary=document.createElement('summary');summary.textContent='Подробный план недели и корректировка порций';legacy.appendChild(summary);
+ const movable=[...kitchen.children].filter(x=>x!==root&&x!==legacy);
+ for(const node of movable)legacy.appendChild(node);
+ kitchen.appendChild(legacy);
+}
 const oldPortions=renderPortions;
 renderPortions=function(){oldPortions();renderKitchen()};
 function dateJobs(){
@@ -117,7 +126,8 @@ function renderKitchen(){
  if(!root)return;
  const header='<div class="k-heading1199"><div><span>ТВОЯ КУХНЯ</span><h2>Запасы и готовка — без хаоса</h2><p>Здесь видно, что уже готово и что предстоит приготовить.</p></div></div>'+
  '<div class="k-tabs1199" role="group" aria-label="Раздел кухни"><button type="button" data-k-view="fridge" class="'+(view==='fridge'?'active':'')+'">Мой холодильник</button><button type="button" data-k-view="cook" class="'+(view==='cook'||view==='session'?'active':'')+'">Режим готовки</button></div>';
- root.innerHTML=header+(view==='fridge'?renderFridge():view==='cook'?renderCook():renderSession());
+ root.innerHTML=header+'<div class="k-week1199"><button type="button" data-k-week="-1">← Неделя</button><strong>'+esc(strDate(current))+' — '+esc(strDate(addDays(current,6)))+'</strong><button type="button" data-k-week="1">Неделя →</button></div>'+(view==='fridge'?renderFridge():view==='cook'?renderCook():renderSession());
+ root.querySelectorAll('[data-k-week]').forEach(b=>b.onclick=()=>nav(Number(b.dataset.kWeek)));
  root.querySelectorAll('[data-k-view]').forEach(b=>b.onclick=()=>{view=b.dataset.kView;sessionStep=0;checkedSteps=new Set();renderKitchen()});
  root.querySelectorAll('[data-k-use]').forEach(b=>b.onclick=()=>clickExisting('use',b.dataset.kUse));
  root.querySelectorAll('[data-k-edit]').forEach(b=>b.onclick=()=>clickExisting('edit',b.dataset.kEdit));
