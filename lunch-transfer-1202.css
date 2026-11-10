@@ -1,0 +1,7 @@
+/* 11.10.2 — reschedule an unused planned lunch, reversible */
+.lunch-transfer1202{margin-top:13px;padding:13px 14px;background:#f0f1e5;border:1px solid #d9dfc8;border-radius:13px}
+.lunch-transfer1202 p{font-size:12px;color:#506147;margin:0 0 9px;line-height:1.5}
+.lunch-transfer1202 button{border:1px solid #c9d2b9;border-radius:99px;background:#fffefa;color:#516848;font-size:12px;font-weight:800;line-height:1.25;padding:10px 13px;margin:0 7px 0 0;cursor:pointer}
+.lunch-transfer1202 button:first-of-type{background:#e1e9d5}
+.lunch-transfer-preview1202{margin:13px 0;padding:13px 14px;background:#f7eee0;border-radius:12px;color:#7a6048;font-size:12px;line-height:1.5}
+@media(max-width:760px){.lunch-transfer1202{padding:11px}.lunch-transfer1202 button{font-size:11px;padding:9px 11px}}
