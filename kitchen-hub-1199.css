@@ -1,0 +1,85 @@
+/* 11.9.9 — kitchen experience. Existing prep cards remain below as a fallback. */
+.kitchen1199{margin:0 0 24px;font-size:14px}
+.k-heading1199{background:linear-gradient(120deg,#f5e5c9,#faf4e8);padding:23px 25px;border-radius:23px;margin-bottom:15px;color:#473126}
+.k-heading1199 span{letter-spacing:.15em;font-size:10px;font-weight:900;color:#a47647}
+.k-heading1199 h2{font-size:clamp(24px,3vw,31px);line-height:1.17;margin:8px 0;letter-spacing:-.025em;color:#4c302a}
+.k-heading1199 p{color:#87705f;font-size:13px;margin:0}
+.k-tabs1199{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:5px;background:#eee6da;border-radius:16px;margin-bottom:19px}
+.k-tabs1199 button{border:0;border-radius:12px;background:transparent;color:#796556;font-size:14px;font-weight:800;min-height:47px;padding:9px 11px}
+.k-tabs1199 button.active{background:#fffefa;color:#4c302a;box-shadow:0 3px 10px #513c2814}
+.k-overview1199{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.k-summary1199{border-radius:17px;background:#fffefa;padding:17px 19px;border:1px solid #ece1d4}
+.k-summary1199 b{display:block;font-size:29px;color:#50382e;letter-spacing:-.04em;line-height:1.1}
+.k-summary1199 span{display:block;font-size:12px;color:#84715f;margin-top:7px}
+.k-toolbar1199{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:17px 0 10px}
+.k-toolbar1199 h3{font-size:23px;letter-spacing:-.025em;margin:0;color:#473126}
+.k-link1199{background:none;border:0;color:#9d603b;font-weight:800;font-size:13px;cursor:pointer;text-align:left;padding:7px 2px}
+.k-muted1199{font-size:13px;color:#86715e;line-height:1.5;margin:5px 0 18px}
+.k-grid1199{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.k-food1199,.k-recipe1199{background:#fffefa;border:1px solid #e9dccb;border-radius:20px;padding:20px;min-width:0}
+.k-food-top1199{display:flex;gap:10px;justify-content:space-between;align-items:center}
+.k-place1199{display:inline-flex;background:#e9f0de;color:#57724a;border-radius:99px;padding:6px 11px;font-size:11px;font-weight:800}
+.k-place1199.frozen{background:#e6eef7;color:#536b89}
+.k-portions1199{font-size:12px;color:#75614d;font-weight:850}
+.k-food1199 h4,.k-recipe1199 h4{font-size:18px;letter-spacing:-.025em;line-height:1.3;margin:16px 0 8px;color:#443027}
+.k-lifetime1199{color:#81715e;font-size:12px;margin:0 0 13px}
+.k-lifetime1199.soon{color:#9d6736;font-weight:750}
+.k-lifetime1199.late{color:#a24f3e;font-weight:800}
+.k-lifetime1199.frozen{color:#58728c}
+.k-actions1199{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.k-actions1199 button{border:1px solid #e2d3c1;border-radius:99px;background:#fbf6ee;color:#6b4e39;font-size:12px;font-weight:800;min-height:40px;padding:9px 12px;cursor:pointer}
+.k-actions1199 button.k-primary1199{background:#efd6b9;border-color:#efd6b9;color:#583927}
+.k-notice1199{background:#fff1d9;padding:14px 16px;border-radius:15px;color:#80603f;font-size:12px;margin-top:16px;line-height:1.55}
+.k-empty1199{background:#fffefa;border:1px dashed #d8c8b8;border-radius:17px;padding:22px;color:#655342}
+.k-empty1199 p{font-size:13px;color:#89745f;margin-bottom:0}
+.k-empty1199 button{background:#f0d7b8;border:0;border-radius:99px;padding:10px 15px;font-weight:750;color:#55382c;margin-top:13px}
+.k-datepick1199{display:flex;gap:7px;overflow-x:auto;padding:3px 0 13px}
+.k-datepick1199 button{white-space:nowrap;border:1px solid #e2d3c4;background:#fffefa;border-radius:99px;padding:10px 14px;font-weight:800;font-size:12px;color:#725945}
+.k-datepick1199 button.selected{background:#52382c;color:#fffaf2;border-color:#52382c}
+.k-cook-intro1199{display:flex;justify-content:space-between;align-items:center;gap:18px;background:#e9eeda;border-radius:19px;padding:20px;margin:5px 0 14px}
+.k-cook-intro1199 small,.k-session-card1199 small{letter-spacing:.12em;font-size:10px;font-weight:900;color:#788666}
+.k-cook-intro1199 h4{font-size:22px;line-height:1.2;margin:7px 0;color:#46543d}
+.k-cook-intro1199 p{font-size:12px;margin:0;color:#6e8064;max-width:480px}
+.k-start1199{white-space:nowrap;border:0;border-radius:99px;background:#4f6846;color:white;padding:13px 19px;font-size:13px;font-weight:850;cursor:pointer}
+.k-recipe1199 .k-recipe-meta1199{font-size:12px;color:#8c7462}
+.k-session1199{background:#fffefa;border:1px solid #e9ddcc;border-radius:22px;padding:21px}
+.k-session-top1199{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px;font-size:12px;color:#876e5b}
+.k-session-top1199 button{border:0;background:none;color:#8f603f;font-weight:800}
+.k-session1199>h3{font-size:26px;letter-spacing:-.03em;margin:0}
+.k-session-progress1199{display:flex;gap:13px;align-items:center;margin:20px 0}
+.k-session-progress1199 span{font-size:12px;color:#7e6955;white-space:nowrap}
+.k-progress-bar1199{flex:1;height:8px;background:#eee8db;border-radius:20px;overflow:hidden}
+.k-progress-bar1199 i{display:block;background:#769361;height:100%;border-radius:20px;transition:width .2s}
+.k-session-card1199{padding:26px;background:#f9f1e3;border-radius:18px;min-height:225px}
+.k-session-card1199 h4{font-size:23px;line-height:1.3;margin:13px 0;color:#45342a}
+.k-session-card1199 p{color:#735f4c;font-size:15px;line-height:1.65;white-space:pre-wrap}
+.k-stepcheck1199{display:flex;align-items:center;gap:9px;margin-top:25px;font-size:14px;font-weight:800;color:#56704a}
+.k-stepcheck1199 input{width:20px;height:20px;accent-color:#688956}
+.k-session-controls1199{display:flex;justify-content:space-between;gap:10px;margin-top:15px}
+.k-session-controls1199 button{background:#f4e7d5;border:0;border-radius:99px;padding:12px 19px;color:#593e2c;font-weight:800}
+.k-session-controls1199 button:disabled{opacity:.4}
+.k-session-finish1199{margin-top:27px}
+.k-session-finish1199 h4{font-size:19px;color:#50392b;margin:0}
+.k-session-finish1199 p{font-size:12px;color:#82705c}
+.k-session-finish1199>button{display:block;width:100%;text-align:left;border:1px solid #d7dccb;background:#eff4e9;border-radius:13px;padding:13px;margin-top:8px;font-weight:750;color:#506b44}
+.kitchen1199 button:focus-visible{outline:3px solid #9b774e;outline-offset:2px}
+@media(max-width:760px){
+.k-heading1199{padding:18px;border-radius:19px}
+.k-heading1199 h2{font-size:25px}
+.k-tabs1199 button{font-size:12px;padding:8px;min-height:47px}
+.k-overview1199{gap:7px}
+.k-summary1199{padding:12px 9px;border-radius:14px}
+.k-summary1199 b{font-size:23px}
+.k-summary1199 span{font-size:10px;line-height:1.25}
+.k-grid1199{grid-template-columns:minmax(0,1fr);gap:10px}
+.k-food1199,.k-recipe1199{padding:17px;border-radius:18px}
+.k-toolbar1199 h3{font-size:20px}
+.k-cook-intro1199{display:block;padding:16px}
+.k-cook-intro1199 h4{font-size:19px}
+.k-cook-intro1199 .k-start1199{margin-top:12px;width:100%}
+.k-session1199{padding:15px}
+.k-session-card1199{padding:18px;min-height:245px}
+.k-session-card1199 h4{font-size:20px}
+.k-session-card1199 p{font-size:14px}
+.k-session-controls1199 button{padding:12px 14px}
+}
