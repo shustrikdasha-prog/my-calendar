@@ -1,0 +1,60 @@
+/* 11.10.4 — smart weekly planner, preview-first */
+.smart-week1204{background:#fffefa;border:1px solid #e9dccb;border-radius:24px;margin:0 0 20px;overflow:hidden;color:#50392d}
+.sw-heading1204{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 23px;background:linear-gradient(120deg,#eaf0df,#f6f0df)}
+.sw-heading1204>div{min-width:0}
+.sw-heading1204>div>span{font-size:10px;letter-spacing:.15em;font-weight:900;color:#788862}
+.sw-heading1204 h2{margin:5px 0 8px;color:#453a2b;font-size:clamp(22px,3vw,28px);line-height:1.18;letter-spacing:-.025em}
+.sw-heading1204 p{margin:0;font-size:12px;line-height:1.5;color:#768065;max-width:520px}
+.sw-week1204{font-size:12px;color:#5d714c;background:#ffffffc7;padding:10px 13px;border:1px solid #dae1d0;border-radius:99px;font-weight:800;white-space:nowrap}
+.smart-week1204 details{padding:0}
+.smart-week1204 summary{display:flex;align-items:center;justify-content:space-between;gap:15px;cursor:pointer;list-style:none;padding:15px 23px;font-size:14px;font-weight:850;color:#57452f}
+.smart-week1204 summary::-webkit-details-marker{display:none}
+.smart-week1204 summary span{font-size:19px;color:#a27750}
+.smart-week1204 details[open]>summary{border-bottom:1px solid #eae0d1;background:#fffaf2}
+.sw-content1204{padding:20px 23px}
+.sw-content1204 h3{font-size:18px;margin:4px 0 12px;color:#493329}
+.sw-day1204{display:flex;justify-content:space-between;align-items:center;gap:15px;border-bottom:1px solid #eee5d9;padding:11px 0;min-width:0}
+.sw-day1204>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.sw-day1204 b{font-size:13px;color:#473327}
+.sw-day1204 small{color:#937c64;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
+.sw-day1204 select,.sw-cook1204 select{background:#fffef9;border:1px solid #d8c8b8;border-radius:12px;padding:11px 12px;color:#533d2d;font-size:12px;font-weight:750;min-width:160px;max-width:100%}
+.sw-cook1204{padding:20px;border-radius:17px;background:#f7f0e5;margin-top:19px}
+.sw-cook1204 h3{margin:0 0 7px}
+.sw-cook1204 p{font-size:12px;color:#806d57;margin:0 0 14px}
+.sw-cook1204>div{display:flex;gap:10px;flex-wrap:wrap}
+.sw-cook1204 select{flex:1;min-width:140px}
+.sw-actions1204{display:flex;gap:11px;flex-wrap:wrap;margin:19px 0 0}
+.sw-actions1204 button,.sw-apply1204{border:0;background:#526745;color:#fffdf8;border-radius:99px;padding:13px 20px;font-weight:850;font-size:13px;cursor:pointer}
+.sw-actions1204 button+button{background:#f6e4ce;color:#6b4931}
+.sw-preview1204{margin-top:22px;padding:20px;background:#faf5ec;border-radius:19px;border:1px solid #e8dac9}
+.sw-preview-heading1204{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sw-preview-heading1204 h4{font-size:21px;margin:0 0 13px;color:#4b3628}
+.sw-preview-heading1204>span{font-size:12px;color:#8a6d50}
+.sw-preview-days1204{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.sw-preview-days1204>div{background:#fffefa;border:1px solid #ece0d1;padding:13px 14px;border-radius:13px;min-width:0}
+.sw-preview-days1204 b{font-size:13px;color:#65462f}
+.sw-preview-days1204 p{font-size:12px;line-height:1.4;margin:7px 0 0;color:#766451;overflow-wrap:anywhere}
+.sw-preview1204 h5{font-size:15px;margin:23px 0 8px;color:#533b2d}
+.sw-preview1204>p{font-size:12px;color:#73614e;line-height:1.7;margin:0}
+.sw-preview1204>p.sw-caution1204{font-size:12px;line-height:1.6;margin:15px 0;background:#fff4df;padding:12px 14px;border-radius:12px}
+.sw-preview1204>p.sw-warning1204{font-size:12px;line-height:1.55;color:#994b34;background:#ffefe6;padding:12px 14px;border-radius:12px;margin:9px 0}
+.sw-apply1204{background:#6b874e;margin-top:16px;width:100%;min-height:48px}
+.smart-week1204 select:focus-visible,.smart-week1204 button:focus-visible,.smart-week1204 summary:focus-visible{outline:3px solid #ab8b65;outline-offset:3px}
+@media(max-width:760px){
+.smart-week1204{border-radius:20px;margin-bottom:15px}
+.sw-heading1204{padding:18px 14px;display:block}
+.sw-heading1204 h2{font-size:23px}
+.sw-week1204{display:inline-block;margin-top:13px;font-size:11px;padding:8px 10px}
+.smart-week1204 summary{padding:15px;font-size:13px}
+.sw-content1204{padding:15px}
+.sw-day1204{gap:8px}
+.sw-day1204>div{flex:1}
+.sw-day1204 small{max-width:145px}
+.sw-day1204 select{min-width:118px;max-width:150px;font-size:11px;padding:10px 7px}
+.sw-cook1204{padding:14px;margin-top:14px}
+.sw-cook1204 select{min-width:105px;font-size:11px}
+.sw-preview1204{padding:13px}
+.sw-preview-days1204{grid-template-columns:minmax(0,1fr);gap:8px}
+.sw-preview1204 h5{margin-top:17px}
+.sw-actions1204 button{width:100%}
+}
