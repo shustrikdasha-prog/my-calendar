@@ -58,3 +58,17 @@
 .sw-preview1204 h5{margin-top:17px}
 .sw-actions1204 button{width:100%}
 }
+/* v11.10.5 · recipe selection preferences and explanations */
+.sw-preferences1205{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:9px 0}
+.sw-preferences1205 button{border:1px solid #d6cbb8;background:#fffdf7;color:#695942;border-radius:13px;padding:13px 10px;font-size:12px;line-height:1.3;font-weight:850;cursor:pointer}
+.sw-preferences1205 button.active{color:#fffef8;background:#536e46;border-color:#536e46}
+.sw-hint1205{font-size:12px;color:#8a7860;line-height:1.55;margin:7px 0 18px}
+.sw-reasons1205{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.sw-reasons1205>div{background:#f5efe2;border-radius:13px;padding:12px;min-width:0}
+.sw-reasons1205 b{display:block;color:#513d2d;font-size:12px;line-height:1.4}
+.sw-reasons1205 small{display:block;margin-top:5px;color:#857260;font-size:11px;line-height:1.45}
+@media(max-width:760px){
+.sw-preferences1205{gap:5px}
+.sw-preferences1205 button{font-size:10px;padding:12px 6px}
+.sw-reasons1205{grid-template-columns:minmax(0,1fr)}
+}
