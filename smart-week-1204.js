@@ -76,7 +76,7 @@ function calculate(){
     continue;
    }
    const g=i<3?0:1,group=groups[g];
-   const chosen=group[(i*2+slot)%group.length];
+   const chosen=group[(i+(slot===1?0:1))%group.length];
    let ready=null;
    // Use only an existing, individually counted ready portion that will remain within conservative age.
    if(slot===1&&i===0)ready=safeReady(date,readyUsed);
@@ -116,7 +116,7 @@ function calculate(){
  return {target,days:candidate.days,changes,jobs:jobList,usedReady:readyUsed,warnings:[...new Set(warnings)],shoppingEstimate,untouched:[...untouched],modes:Object.fromEntries(weekdayDays.map(d=>[d,selectedModes.get(d)||'home'])),cookingDates,original:state.weeks?.[target]?clone(state.weeks[target]):null};
 }
 function boxSummary(d){
- const day=getDay(d);
+ const day=(state.weeks?.[weekStart(d)]||templateWeek(weekStart(d))).days[dayIndex(d)-dayIndex(weekStart(d))];
  return day.meals?.[1]?.title||'';
 }
 function preview(){
@@ -150,7 +150,7 @@ function apply(){
  state.lunchMode1201??={};
  for(const [d,mode] of Object.entries(draft.modes)){
   if(mode==='buy'){
-   state.lunchMode1201[d]={mode,original:clone(draft.original?.days?.find(x=>x.date===d)?.meals?.[1]||baseline(target).days.find(x=>x.date===d).meals[1])};
+   state.lunchMode1201[d]={mode,original:clone(lastUndo.modes?.[d]?.original||draft.original?.days?.find(x=>x.date===d)?.meals?.[1]||baseline(target).days.find(x=>x.date===d).meals[1])};
   }else state.lunchMode1201[d]={mode};
  }
  state.smartBatches1204??={};
