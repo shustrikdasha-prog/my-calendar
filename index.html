@@ -1205,16 +1205,40 @@ try{const snapshot=cloneState(); const {data,error}=await cloud.from('calendar_r
 if(error)throw error;cloudReady=true;cloudDirty=localRevision!==revisionAtStart;latestCloud=snapshot;cloudRevision=data?.updated_at||cloudRevision;localStorage.setItem(connectedMarker(cloudUser.id),'1');status(cloudDirty?'Сохранение…':'Синхронизировано');msg(initial?'Перенос завершён. Изменения теперь сохраняются локально и в облаке.':'Изменения сохранены в облаке.');
 }catch(e){cloudDirty=true;status('Не сохранено в облаке');msg('Ошибка сохранения: '+e.message+' Локальная копия осталась на устройстве. Повтори сохранение.');}
 finally{busy=false;if(cloudDirty&&cloudReady){clearTimeout(saveTimer);saveTimer=setTimeout(()=>push(),500)}}}
-async function pull(){if(!cloudUser||!cloud)return;
-if(cloudDirty&&!confirm('Есть локальные изменения, которые могли не попасть в облако. Заменить их облачной копией?'))return;
-try{const {data,error}=await cloud.from('calendar_records').select('payload').eq('record_type','settings').eq('record_key','app_state').maybeSingle();if(error)throw error;
-if(!data){msg('В облаке пока нет сохранённых данных. Сначала перенеси их с основного устройства.');return}
-if(!data.payload||typeof data.payload!=='object'||!data.payload.weeks){throw Error('Облачная копия повреждена или неполная')}
-if(!confirm('Загрузить облачную копию? Локальные изменения текущего устройства будут заменены. Перед этим можно экспортировать JSON во вкладке «Данные».'))return;
-cloudReady=false;applyCloud(data.payload);cloudReady=true;cloudDirty=false;latestCloud=data.payload;localStorage.setItem(connectedMarker(cloudUser.id),'1');
-const {data:meta}=await cloud.from('calendar_records').select('updated_at').eq('record_type','settings').eq('record_key','app_state').maybeSingle();cloudRevision=meta?.updated_at||null;
-status('Синхронизировано');msg('Данные загружены из облака.');
-}catch(e){msg('Не удалось загрузить: '+e.message)}}
+async function pull(){
+ if(!cloudUser||!cloud){msg('Не удалось загрузить: облачный вход ещё не готов. Открой настройки облака.');return}
+ if(cloudDirty&&!confirm('Есть локальные изменения, которые могли не попасть в облако. Заменить их облачной копией?'))return;
+ let phase='получение копии';
+ try{
+  const {data:session,error:sessionError}=await cloud.auth.getSession();
+  if(sessionError||!session?.session?.user)throw Error('Сессия входа закончилась. Войди в облако повторно.');
+  const {data,error}=await cloud.from('calendar_records').select('payload,updated_at').eq('user_id',session.session.user.id).eq('record_type','settings').eq('record_key','app_state').maybeSingle();
+  if(error)throw Error('Ошибка Supabase '+(error.code||'')+': '+error.message);
+  if(!data){msg('В облаке пока нет сохранённой копии для этого аккаунта. Не заменяй данные на телефоне — сначала проверь аккаунт и сохранение на основном устройстве.');return}
+  if(!data.payload||typeof data.payload!=='object'||!data.payload.weeks||typeof data.payload.weeks!=='object')
+   throw Error('Копия не содержит корректного меню');
+  const size=JSON.stringify(data.payload).length;
+  if(!confirm('Найдена облачная копия ('+Math.round(size/1024)+' КБ, обновлена '+new Date(data.updated_at).toLocaleString('ru-RU')+'). Загрузить? Локальные изменения будут заменены. Перед этим можно экспортировать JSON во вкладке «Данные».'))return;
+  phase='применение копии';
+  const previous=cloneState();
+  const wasReady=cloudReady,wasDirty=cloudDirty,wasLatest=latestCloud,wasRevision=cloudRevision;
+  try{
+   // Keep previous local state until the newly downloaded data renders successfully.
+   applyCloud(data.payload);
+   cloudReady=true;cloudDirty=false;latestCloud=data.payload;cloudRevision=data.updated_at||null;
+   localStorage.setItem(connectedMarker(cloudUser.id),'1');
+   status('Синхронизировано');msg('Облачная копия загружена ('+Math.round(size/1024)+' КБ).');
+  }catch(renderError){
+   state=previous;cloudReady=wasReady;cloudDirty=wasDirty;latestCloud=wasLatest;cloudRevision=wasRevision;
+   localSave();
+   try{renderAll()}catch(ignore){}
+   throw renderError;
+  }
+ }catch(e){
+  console.error('Cloud pull failure ('+phase+')',e);
+  msg('Не удалось загрузить копию ('+phase+'): '+(e?.message||String(e))+'. Данные на телефоне сохранены. Если ошибка повторяется, отправь текст сообщения.');
+ }
+}
 // Wrap legacy local save. The original calendar still works offline.
 save=function(){localSave();if(!cloudReady||!cloudUser)return;localRevision++;cloudDirty=true;status('Сохранение…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>push(),1300)};
 $('cloudConnect').onclick=connect;
