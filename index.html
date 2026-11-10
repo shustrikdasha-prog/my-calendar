@@ -846,14 +846,14 @@ function renderAutoTasks(){let jobs=batchesForWeek(),date=selected,today=todayIS
  let tasks=document.getElementById('tasks'),entry=jobs.filter(x=>x.date===date),items=entry.map(j=>`<div class="task-action-row task-auto"><div class="task-title"><b>${state.cookDone[j.key]?'✓ ':''}Приготовить ${j.count} порц. · ${escapes(j.recipe.name)}</b><div class="sub">${j.freeze?'Часть заморозить · ':''}Разложить по контейнерам</div></div><div class="task-buttons"><button class="btn alt" type="button" data-auto-cook="${escapes(j.key)}">${state.cookDone[j.key]?'Отменить':'Готово'}</button></div></div>`).join('');
  if(events.length)items+=`<div class="shoptrip-note">Сегодня закупка №${events.map(e=>e.index+1).join(', ')} · <button class="link" type="button" id="openShopFromDay">Открыть покупки →</button></div>`;
  let tomorrow=getDay(addDays(date,1)),lunch=tomorrow?.meals?.[1],autoExtra=[];
- if(lunch&&/контейнер/i.test(lunch.title||'')&&!getDay(date).tasks.some(t=>/собрать.{0,20}контейнер|контейнер.{0,20}собрать/i.test(t.text)))autoExtra.push({key:'task:auto-pack:'+date,label:'Собрать контейнер на завтра · '+lunch.title});
+ if(lunch&&(window.chtoPoestLunchMode1201?.get(tomorrow.date)==='container'||(!window.chtoPoestLunchMode1201&&/контейнер/i.test(lunch.title||'')))&&!getDay(date).tasks.some(t=>/собрать.{0,20}контейнер|контейнер.{0,20}собрать/i.test(t.text)))autoExtra.push({key:'task:auto-pack:'+date,label:'Собрать контейнер на завтра · '+lunch.title});
  for(let meal of (tomorrow?.meals||[]))if(meal.readyId){let portion=state.ready.find(r=>r.id===meal.readyId);if(portion?.place==='freezer')autoExtra.push({key:'task:auto-thaw:'+date+':'+meal.readyId,label:'Переложить из морозилки в холодильник · '+portion.name})}
  items+=autoExtra.map(t=>`<div class="task-action-row task-auto"><div class="task-title ${isDone(t.key)?'done':''}">${escapes(t.label)}</div><div class="task-buttons"><button type="button" class="btn alt" data-auto-extra="${escapes(t.key)}">${isDone(t.key)?'Отменить':'Готово'}</button></div></div>`).join('');
  if(items){tasks.insertAdjacentHTML('beforeend',items);document.getElementById('openShopFromDay')?.addEventListener('click',()=>document.querySelector('[data-tab="shop"]').click());bindChecks()}
  tasks.querySelectorAll('[data-auto-extra]').forEach(b=>b.onclick=()=>mark(b.dataset.autoExtra,!isDone(b.dataset.autoExtra)));tasks.querySelectorAll('[data-auto-cook]').forEach(b=>b.onclick=()=>{let j=jobs.find(j=>j.key===b.dataset.autoCook);if(j){if(state.cookDone[j.key])undoCook(j);else cookJob(j)}});
  const todayTasks=batchesForWeek(weekStart(today)).filter(x=>x.date===today),host=document.getElementById('todayContent');
  const nextDay=getDay(addDays(today,1)),pack=nextDay?.meals?.[1];let extras=[];
- if(pack&&/контейнер/i.test(pack.title||'')&&!getDay(today).tasks.some(t=>/контейнер/i.test(t.text)))extras.push({key:'task:auto-pack:'+today,label:'Собрать контейнер на завтра · '+pack.title});
+ if(pack&&(window.chtoPoestLunchMode1201?.get(nextDay.date)==='container'||(!window.chtoPoestLunchMode1201&&/контейнер/i.test(pack.title||'')))&&!getDay(today).tasks.some(t=>/контейнер/i.test(t.text)))extras.push({key:'task:auto-pack:'+today,label:'Собрать контейнер на завтра · '+pack.title});
  for(let meal of (nextDay?.meals||[]))if(meal.readyId){let r=state.ready.find(x=>x.id===meal.readyId);if(r?.place==='freezer')extras.push({key:'task:auto-thaw:'+today+':'+meal.readyId,label:'Переложить из морозилки в холодильник · '+r.name})}
  if(extras.length){let div=document.createElement('section');div.className='card';div.innerHTML='<h3>Подготовить на завтра</h3>'+extras.map(x=>btnCheck(x.key,x.label)).join('');host.appendChild(div);bindChecks()}
  if(shoppingEventsOn(today).length){const t=document.createElement('div');t.className='shoptrip-note';t.textContent='Сегодня нужно закупиться!';host.appendChild(t)}if(todayTasks.length){let section=document.createElement('div');section.className='today-cooking-block';section.innerHTML='<h3>Приготовить сегодня</h3>'+todayTasks.map(j=>`<div class="ready-item"><div class="fill"><b>${escapes(j.recipe.name)}</b><div class="sub">${j.count} порц. · разложить по контейнерам${j.freeze?', заморозить '+j.freeze:''}</div><button class="btn alt" type="button" data-todaycook="${escapes(j.key)}">${state.cookDone[j.key]?'Отменить':'Приготовила'}</button></div></div>`).join('');host.appendChild(section);host.querySelectorAll('[data-todaycook]').forEach(b=>b.onclick=()=>{let j=todayTasks.find(x=>x.key===b.dataset.todaycook);if(j){if(state.cookDone[j.key])undoCook(j);else cookJob(j)}})}
@@ -2034,10 +2034,11 @@ renderAll();
 <script src="./cooked-yield-1189.js" defer></script>
 <script src="./cooking-task-recipes-1190.js" defer></script>
 <script src="./task-links-and-portions-1191.js" defer></script>
-<script src="./meal-prep-batches-1192.js" defer></script>
+<script src="./meal-prep-batches-1192.js?v=11101" defer></script>
 <script src="./nov-prescriptions-1193.js" defer></script>
 <script src="./iphone-notifications-1194.js" defer></script>
 <script src="./iron-menu-and-courses-1197.js" defer></script>
 <script src="./daily-dashboard-1198.js" defer></script>
 <script src="./kitchen-hub-1199.js?v=11100" defer></script>
+<script src="./office-lunch-1201.js?v=11101" defer></script>
 </body></html>
