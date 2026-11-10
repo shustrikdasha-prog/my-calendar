@@ -94,6 +94,18 @@ function renderCook(){
  }).join('')+'</div>':'');
 }
 // Smart workflow alternates dishes while strictly preserving every recipe's own order.
+function cookingMethod(j){
+ const text=(j.recipe.steps||[]).join(' ').toLowerCase();
+ return /духовк|запека|выпека/.test(text)?'Духовка':/варить|вари|туш|жар|сковород|кипят|кастрюл/.test(text)?'Плита':'Ручная подготовка';
+}
+function jointCookingHint(jobs){
+ if(jobs.length<2)return 'План на одно блюдо. Следуй шагам рецепта.';
+ const methods=jobs.map(cookingMethod);
+ const oven=methods.includes('Духовка'),stove=methods.includes('Плита');
+ if(oven&&stove)return 'Можно сочетать работу духовки и плиты: пока одно блюдо запекается, выполняй подготовительные шаги другого. Контролируй нагрев и соблюдай температуру и время из каждого рецепта.';
+ if(methods.filter(x=>x==='Плита').length>1)return 'На плите несколько блюд. Проверь число конфорок и посуду; если места не хватает, готовь по очереди. Не оставляй активный нагрев без присмотра.';
+ return 'Подготовь общие ингредиенты и посуду сразу. Шаги разных блюд чередуются там, где это допускает каждый рецепт.';
+}
 function sessionSteps(jobs){
  const result=[{title:'Подготовь рабочее место',description:'Проверь ингредиенты и посуду для всех блюд. Для сырого мяса используй отдельный инвентарь и мой руки и поверхности.',kind:'setup'}];
  const sets=jobs.map(j=>({j,steps:Array.isArray(j.recipe.steps)&&j.recipe.steps.length?j.recipe.steps:['Открой полный рецепт: шаги приготовления пока не указаны.']}));
@@ -109,7 +121,7 @@ function sessionSteps(jobs){
 }
 function cookingTimeInfo(jobs){
  const durations=jobs.map(j=>{
-  const t=String(j.recipe.time||''),range=t.match(/(\d+)\s*[–-]\s*(\d+)/),single=t.match(/(\d+)\s*(мин|час)/i);
+  const t=String(j.recipe.time||''),range=t.match(/(\d+)\s*[–-]\s*(\d+)/),single=t.match(/(\d+)\s*(мин|час|ч\\b)/i);
   return range?Number(range[2]):single?Number(single[1])*(/час/i.test(single[2])?60:1):null;
  });
  const known=durations.filter(Number.isFinite);
@@ -136,7 +148,8 @@ function renderSession(){
  const step=steps[sessionStep],pct=Math.round(100*[...checkedSteps].filter(x=>x<steps.length).length/steps.length);
  return '<div class="k-session1199"><div class="k-session-top1199"><button type="button" data-k-back>← К плану</button><span>'+esc(dateFmt(sessionDate))+'</span></div>'+
  '<h3>Готовим вместе</h3><p class="k-muted1199">Шаги разных блюд чередуются, но порядок каждого рецепта сохранён. Не оставляй нагрев без присмотра.</p>'+
- '<div class="k-flow-time1200"><b>Оценка времени</b><span>'+esc(cookingTimeInfo(jobs))+'</span></div>'+ 
+ '<div class="k-flow-time1200"><b>По времени</b><span>'+esc(cookingTimeInfo(jobs))+'</span></div>'+ 
+ '<div class="k-combo1200"><b>Что можно делать параллельно</b><p>'+esc(jointCookingHint(jobs))+'</p></div>'+ 
  '<div class="k-session-progress1199"><div class="k-progress-bar1199"><i style="width:'+pct+'%"></i></div><span>'+checkedSteps.size+' / '+steps.length+' шагов</span></div>'+
  '<div class="k-session-card1199"><small>ШАГ '+(sessionStep+1)+' ИЗ '+steps.length+(step.kind==='heat'?' · ТЕРМООБРАБОТКА':'')+'</small><h4>'+esc(step.title)+'</h4><p>'+esc(step.description)+'</p>'+
  (step.recipeId?'<button type="button" class="k-link1199" data-k-recipe="'+esc(step.recipeId)+'">Открыть полный рецепт →</button>':'')+
