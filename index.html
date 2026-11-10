@@ -1188,7 +1188,20 @@ async function probeCloud(){if(!cloudUser||!cloud)return;try{
  else msg('Облачная копия пока пуста. Нажми «Перенести мои данные в облако».');
  }catch(e){msg('Ошибка чтения облачной копии: '+e.message+'; синхронизация не включена.')}}
 function cloneState(){return JSON.parse(JSON.stringify(state))}
-function applyCloud(payload){state={...clone(base),...payload};state.favs??={};state.stock??=[];state.costs??={};state.ready??=[];state.purchaseLog??={};state.cookDone??={};state.mealConsumed??={};localSave();renderAll()}
+function applyCloud(payload){
+ // Older cloud copies may not contain state collections added in later versions.
+ // Normalize before *any* render: portionHistory1187 reads portionYield1187[row.id].
+ const restored={...clone(base),...payload};
+ for(const key of ['favs','costs','purchaseLog','cookDone','mealConsumed','portionYield1187','actualMeals','nutritionOverrides','recipeFeedback1188','dislikedRecipes','lunchVeg1192','checks','weeks','recipes','meds','extras','shopDates']){
+  if(!restored[key]||typeof restored[key]!=='object'||Array.isArray(restored[key]))restored[key]={};
+ }
+ for(const key of ['stock','ready']){
+  if(!Array.isArray(restored[key]))restored[key]=[];
+ }
+ state=restored;
+ localSave();
+ renderAll();
+}
 async function checkCloudUpdates(){
  if(!cloudUser||!cloud||!cloudReady||cloudDirty||busy||syncing||document.visibilityState==='hidden')return;
  if(Date.now()-lastCheck<3500)return;lastCheck=Date.now();syncing=true;
