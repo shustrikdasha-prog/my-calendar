@@ -1,4 +1,4 @@
-/* 11.10.4 · Preview-first next-week meal planning. No changes until explicit Apply. */
+/* 11.10.5 · Preview-first next-week meal planning. No changes until explicit Apply. */
 (function(){
 'use strict';
 const host=document.getElementById('calendar');
@@ -9,6 +9,8 @@ const dow=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const modes={home:'Дома',container:'Контейнер',buy:'Покупаю обед'};
 const selectedModes=new Map();
 let target='',draft=null,stepDates=[0,3],lastUndo=null;
+let preference='balanced'; // balanced | pantry | favorites
+
 function ensureTarget(){
  const next=START();
  if(target===next)return;
@@ -27,14 +29,79 @@ function foodRecipes(){
   if(!/индей|куриц|говядин|рыб|суп|котлет|тефтел|тушен|чечевиц|фасол|нут|лосос|форел|овощ|филе|гречк|киноа|рагу/i.test(r.name||''))return false;
   return true;
  });
- // Prefer recipes already linked to a user's menus; don't invent recipes.
- const seen=new Set();
- const favor=[];
- for(const w of Object.values(state.weeks||{}))for(const d of w?.days||[])for(const m of [d.meals?.[1],d.meals?.[3]]){
-  if(m?.recipeId&&!seen.has(m.recipeId)){seen.add(m.recipeId);favor.push(m.recipeId)}
- }
- return all.sort((a,b)=>Number(favor.includes(b.id))-Number(favor.includes(a.id))||a.name.localeCompare(b.name,'ru'));
+ // Use all eligible recipes; ranking below combines pantry, favorites and variety.
+ return all.sort((a,b)=>a.name.localeCompare(b.name,'ru'));
 }
+// Explainable scoring uses only recorded recipe feedback, pantry contents and actual meal history.
+function proteinFamily(recipe){
+ const t=(recipe.name+' '+(recipe.ingredients||[]).join(' ')).toLowerCase();
+ if(/рыб|лосос|форел|треск|тунец/.test(t))return 'Рыба';
+ if(/говядин|телятина/.test(t))return 'Говядина';
+ if(/индей/.test(t))return 'Индейка';
+ if(/куриц|курино/.test(t))return 'Курица';
+ if(/чечевиц|фасол|нут/.test(t))return 'Бобовые';
+ return 'Другое';
+}
+function recipeTimeScore(recipe){
+ const t=String(recipe.time||''),range=t.match(/(\\d+)\\s*[–-]\\s*(\\d+)/);
+ const numbers=[...t.matchAll(/(\\d+)\\s*(час|мин)/gi)];
+ let n=range?Number(range[2]):numbers.reduce((sum,m)=>sum+Number(m[1])*(m[2].toLowerCase()==='час'?60:1),0);
+ if(t.includes('+')&&n<20)n=45;
+ if(!n)n=safeQuickMinutes(recipe);
+ if(n>240||!Number.isFinite(n))return 0;
+ return n<=30?6:n<=45?4:n<=65?2:0;
+}
+function pantryFit(recipe,stocks){
+ const items=editableIngredients(recipe,1);
+ if(!items.length)return 0;
+ const have=items.filter(x=>(stocks.get(normalizeShopName(x.name)+'|'+x.unit)||0)>=x.qty*.75).length;
+ return have/items.length;
+}
+function recentRecipeCounts(){
+ const used={};
+ for(const d of Object.values(state.weeks||{}).flatMap(w=>w?.days||[])){
+  if(!d.date||d.date>=target||d.date<addDays(target,-14))continue;
+  for(const m of [d.meals?.[1],d.meals?.[3]]){
+   if(m?.recipeId)used[m.recipeId]=(used[m.recipeId]||0)+1;
+  }
+ }
+ return used;
+}
+function rankedGroups(pool){
+ const stocks=stockMap(),recent=recentRecipeCounts();
+ const categories=[],usedNames=new Set(),details={};
+ const weights=preference==='pantry'?{stock:21,favorite:5,repeat:4}:preference==='favorites'?{stock:5,favorite:18,repeat:4}:{stock:12,favorite:10,repeat:6};
+ const base=pool.map(r=>{
+  const history=recent[r.id]||0,fit=pantryFit(r,stocks),feedback=state.recipeFeedback1188?.[r.id];
+  const like=!!state.favs?.[r.id]||feedback==='liked';
+  const score=fit*weights.stock+(like?weights.favorite:0)+(feedback==='ok'?2:0)+recipeTimeScore(r)-Math.min(4,history)*weights.repeat;
+  details[r.id]={family:proteinFamily(r),fit,like,history,time:r.time||'не указано'};
+  return {r,score};
+ });
+ // Choose two dishes per batch. Strongly discourage same protein in a batch
+ // and repeat recipes across cooking days; use deterministic tie-breaking.
+ function select(max){
+  const chosen=[];
+  for(let i=0;i<max;i++){
+   const options=base.filter(x=>!usedNames.has(x.r.id));
+   if(!options.length)break;
+   const scored=options.map(x=>{
+    const family=details[x.r.id].family;
+    const alreadySame=chosen.some(y=>details[y.id].family===family);
+    const familyRepeated=categories.includes(family);
+    return {r:x.r,value:x.score-(alreadySame?22:0)-(familyRepeated?5:0)};
+   }).sort((x,y)=>y.value-x.value||x.r.name.localeCompare(y.r.name,'ru'));
+   const winner=scored[0].r;
+   chosen.push(winner);usedNames.add(winner.id);categories.push(details[winner.id].family);
+  }
+  return chosen;
+ }
+ const first=select(2),second=select(2);
+ if(!second.length)second.push(...first);
+ if(second.length===1)second.push(first.find(r=>r.id!==second[0].id)||first[0]);
+ return {groups:[first,second],details};
+}
+
 function safeReady(date,used){
  const rows=(Array.isArray(state.ready)?state.ready:[]).filter(r=>{
   if(!r?.recipeId||!recipes()[r.recipeId]||!Number.isFinite(Number(r.qty))||r.qty<=0)return false;
@@ -55,12 +122,12 @@ function calculate(){
  const weekdayDays=Array.from({length:7},(_,i)=>addDays(target,i));
  const pool=foodRecipes();
  if(pool.length<2)throw Error('Недостаточно полноценных рецептов с ингредиентами и шагами. Добавь хотя бы два основных блюда в книгу рецептов.');
- const groups=[pool.slice(0,2),pool.slice(2,4)];
- if(!groups[1].length)groups[1]=groups[0];
+ const ranked=rankedGroups(pool),groups=ranked.groups;
  const candidate=baseline(target);
  const changes=[],readyUsed={},jobs={},warnings=[];
  const cookingDates=[addDays(target,stepDates[0]),addDays(target,stepDates[1])];
  if(pool.length<4)warnings.push('Подходящих основных рецептов меньше четырёх: блюда будут повторяться.');
+ if(new Set(groups.flat().map(x=>x.id)).size<4)warnings.push('Четырёх разных подходящих рецептов не нашлось: часть блюд повторится.');
  const today=todayISO();
  const untouched=new Set();
  for(let i=0;i<7;i++){
@@ -113,7 +180,7 @@ function calculate(){
   }
  }
  const shoppingEstimate=[...ing.entries()].map(([key,row])=>({...row,qty:Math.max(0,Math.round((row.qty-(stock.get(key)||0))*10)/10)})).filter(x=>x.qty>0.01).sort((a,b)=>a.name.localeCompare(b.name,'ru'));
- return {target,days:candidate.days,changes,jobs:jobList,usedReady:readyUsed,warnings:[...new Set(warnings)],shoppingEstimate,untouched:[...untouched],modes:Object.fromEntries(weekdayDays.map(d=>[d,selectedModes.get(d)||'home'])),cookingDates,original:state.weeks?.[target]?clone(state.weeks[target]):null};
+ return {target,days:candidate.days,changes,jobs:jobList,recipeReasons:ranked.details,preference,usedReady:readyUsed,warnings:[...new Set(warnings)],shoppingEstimate,untouched:[...untouched],modes:Object.fromEntries(weekdayDays.map(d=>[d,selectedModes.get(d)||'home'])),cookingDates,original:state.weeks?.[target]?clone(state.weeks[target]):null};
 }
 function boxSummary(d){
  const day=(state.weeks?.[weekStart(d)]||templateWeek(weekStart(d))).days[dayIndex(d)-dayIndex(weekStart(d))];
@@ -196,6 +263,16 @@ function view(){
   const lunch=draft.days[i].meals?.[1],dinner=draft.days[i].meals?.[3];
   return '<div><b>'+dow[i]+' '+strDate(date)+'</b><p>Обед: '+safe(lunch?.title||'—')+'</p><p>Ужин: '+safe(dinner?.title||'—')+'</p></div>';
  }).join('')+'</div>'+
+ '<h5>Почему выбраны эти блюда</h5><div class="sw-reasons1205">'+[...new Set(draft.jobs.map(j=>j.id))].map(id=>{
+ const reason=draft.recipeReasons?.[id],name=recipes()[id]?.name||id;
+ const labels=[];
+ if(reason?.like)labels.push('нравится тебе');
+ if(reason?.fit>=0.6)labels.push('много ингредиентов уже дома');
+ if(reason?.history===0)labels.push('не было в последние 2 недели');
+ if(reason?.time)labels.push('время: '+reason.time);
+ if(reason?.family)labels.push('категория: '+reason.family.toLowerCase());
+ return '<div><b>'+safe(name)+'</b><small>'+safe(labels.slice(0,3).join(' · ')||'подходящий рецепт')+'</small></div>';
+ }).join('')+'</div>'+
  '<h5>Готовка · '+draft.jobs.length+' блюд</h5><p>'+draft.jobs.map(j=>safe(strDate(j.date))+' — '+safe(recipes()[j.id]?.name)+' × '+j.count+' порц.').join('<br>')+'</p>'+
  '<h5>Ориентировочные покупки · '+draft.shoppingEstimate.length+' позиций</h5><p>'+(draft.shoppingEstimate.length?draft.shoppingEstimate.map(x=>safe(x.name)+' — '+x.qty+' '+safe(x.unit)).join('<br>'):'По известным ингредиентам дополнительных покупок не требуется.')+'</p>'+
  '<p class="sw-caution1204">Расчёт ориентировочный: магазинные упаковки, овощи для контейнеров, уже закупленные продукты и индивидуальная калорийность могут требовать корректировки. Учёт покупок на экране «Покупки» пересчитается после применения.</p>'+
@@ -203,10 +280,13 @@ function view(){
  '<button type="button" class="sw-apply1204" id="swApply1204">Применить этот план</button></div>':'';
  root.innerHTML='<div class="sw-heading1204"><div><span>ПЛАНИРОВЩИК</span><h2>Собрать следующую неделю</h2><p>Сначала выбери обеды и дни готовки. Мы покажем план, а изменения внесём только после подтверждения.</p></div><span class="sw-week1204">'+strDate(target)+' — '+strDate(addDays(target,6))+'</span></div>'+
  '<details id="swDetails1204" '+(draft?'open':'')+'><summary>Настроить меню на следующую неделю <span>→</span></summary>'+
- '<div class="sw-content1204"><h3>Где обедаешь?</h3>'+modeRows+
+ '<div class="sw-content1204"><h3>Как подбирать блюда?</h3><div class="sw-preferences1205" role="group" aria-label="Приоритеты подбора рецептов">'+
+ [['balanced','Баланс'],['pantry','Из продуктов дома'],['favorites','Любимые блюда']].map(([id,label])=>'<button type="button" data-sw-pref="'+id+'" class="'+(preference===id?'active':'')+'" aria-pressed="'+String(preference===id)+'">'+label+'</button>').join('')+
+ '</div><p class="sw-hint1205">Учитываем отметки «Понравилось» и «Не повторять», продукты дома, время приготовления, разнообразие белковых продуктов и блюда последних двух недель. Это ориентировочный подбор, не медицинская оценка.</p><h3>Где обедаешь?</h3>'+modeRows+
  '<div class="sw-cook1204"><h3>Два дня готовки</h3><p>Первый день — в начале недели, второй — ближе к выходным. Выбирай день не позже первого блюда соответствующего цикла.</p><div>'+prep+'</div></div>'+
  '<div class="sw-actions1204"><button id="swPreview1204" type="button">Предпросмотр меню и покупок</button>'+(lastUndo?'<button id="swUndo1204" type="button">Отменить последнее применение</button>':'')+'</div>'+planned+'</div></details>';
  // Preserve expanded state while editing.
+ root.querySelectorAll('[data-sw-pref]').forEach(btn=>btn.onclick=()=>{preference=btn.dataset.swPref;draft=null;view();root.querySelector('details').open=true});
  root.querySelectorAll('[data-sw-date]').forEach(x=>x.onchange=()=>{
   selectedModes.set(x.dataset.swDate,x.value);draft=null;const open=true;view();root.querySelector('details').open=open;
  });
@@ -244,6 +324,6 @@ batchesForWeek=function(w=current){
 };
 const formerCalendar=renderCalendar;
 renderCalendar=function(){formerCalendar();view()};
-document.querySelectorAll('.footer').forEach(e=>e.textContent='Версия 11.10.4');
+document.querySelectorAll('.footer').forEach(e=>e.textContent='Версия 11.10.5');
 view();
 })();
