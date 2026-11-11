@@ -4,6 +4,7 @@
 'use strict';
 const OPTIONS={home:'Обедаю дома',container:'Беру контейнер',buy:'Покупаю в офисе'};
 const esc=v=>escapes(String(v??''));
+const expandedLunch1207=new Set();
 function readMode(date){
  const explicit=state.lunchMode1201?.[date]?.mode;
  if(explicit&&OPTIONS[explicit])return explicit;
@@ -19,7 +20,7 @@ function setMode(date,next){
  if(isDone(key)){alert('Этот обед уже отмечен съеденным. Сначала сними отметку в меню дня, затем поменяй план.');return}
  state.lunchMode1201??={};
  const prev=state.lunchMode1201[date]||{},was=readMode(date);
- if(was===next)return;
+ if(was===next){expandedLunch1207.clear();renderAll();return;}
  if(window.chtoPoestTransfer1202?.beforeModeChange&&!window.chtoPoestTransfer1202.beforeModeChange(date,next))return;
  const previousMeal=prev.original;
  // A prepared batch is real food: switching plans must not undo cooking or add stock.
@@ -47,10 +48,11 @@ function picker(date,context){
    (missing?'Для этого обеда нет привязанного рецепта. Сначала выбери домашнее блюдо: без него невозможно точно рассчитать продукты и порции.':'Основной контейнер 500 мл + овощной 240 мл. Собери утром или накануне.'):
    mode==='buy'?'Домашняя порция не отмечается съеденной, калории неизвестны до ввода фактического обеда.':'Обед дома: не нужно собирать офисный контейнер.';
  const bought=mode==='buy';
- return '<section class="lunch-panel1201" data-lunch-panel="'+context+'"><div class="lunch-header1201"><strong>Где обедаем?</strong><span>'+esc(date===todayISO()?'Сегодня':strDate(date))+'</span></div>'+
- '<div class="lunch-options1201">'+Object.entries(OPTIONS).map(([value,label])=>
-  '<button type="button" data-lunch-choice="'+value+'" data-lunch-date="'+date+'" class="'+(mode===value?'active':'')+'" aria-pressed="'+String(mode===value)+'">'+esc(label)+'</button>').join('')+'</div>'+
- '<p class="lunch-description1201">'+esc(desc)+'</p>'+
+ const compact=!!current&&!expandedLunch1207.has(date+'|'+context);
+ return '<section class="lunch-panel1201 '+(compact?'lunch-compact1207':'')+'" data-lunch-panel="'+context+'"><div class="lunch-header1201"><strong>'+(compact?'Обед: '+esc(OPTIONS[mode]):'Где обедаем?')+'</strong>'+(compact?'<button type="button" class="lunch-change1207" data-lunch-change="'+date+'">Изменить</button>':'<span>'+esc(date===todayISO()?'Сегодня':strDate(date))+'</span>')+'</div>'+
+ (compact?'':'<div class="lunch-options1201">'+Object.entries(OPTIONS).map(([value,label])=>
+  '<button type="button" data-lunch-choice="'+value+'" data-lunch-date="'+date+'" class="'+(mode===value?'active':'')+'" aria-pressed="'+String(mode===value)+'">'+esc(label)+'</button>').join('')+'</div>')+
+ (compact?'':'<p class="lunch-description1201">'+esc(desc)+'</p>')+
  (bought?'<button class="lunch-fact1201" type="button" data-lunch-actual="'+date+'">Записать, что купила и съела →</button>':
  missing?'<button class="lunch-fact1201" type="button" data-lunch-edit="'+date+'">Выбрать блюдо для контейнера →</button>':'')+
  (!current?'<p class="lunch-light1201">Режим определён из существующего меню. Выбери другой, если планы изменились.</p>':'')+'</section>';
@@ -63,7 +65,8 @@ function attach(host,date,context){
  if(!anchor)return;
  anchor.insertAdjacentHTML('afterend',markup);
  const section=anchor.nextElementSibling;
- section.querySelectorAll('[data-lunch-choice]').forEach(b=>b.onclick=()=>setMode(b.dataset.lunchDate,b.dataset.lunchChoice));
+ section.querySelectorAll('[data-lunch-change]').forEach(b=>b.onclick=()=>{expandedLunch1207.add(b.dataset.lunchChange+'|'+context);attach(host,date,context)});
+ section.querySelectorAll('[data-lunch-choice]').forEach(b=>b.onclick=()=>{expandedLunch1207.delete(b.dataset.lunchDate+'|'+context);setMode(b.dataset.lunchDate,b.dataset.lunchChoice);attach(host,date,context)});
  section.querySelectorAll('[data-lunch-edit]').forEach(b=>b.onclick=()=>{
   const date=b.dataset.lunchEdit;
   current=weekStart(date);selected=date;
