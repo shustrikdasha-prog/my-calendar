@@ -20,7 +20,7 @@ function setMode(date,next){
  if(isDone(key)){alert('Этот обед уже отмечен съеденным. Сначала сними отметку в меню дня, затем поменяй план.');return}
  state.lunchMode1201??={};
  const prev=state.lunchMode1201[date]||{},was=readMode(date);
- if(was===next){expandedLunch1207.clear();renderAll();return;}
+ if(was===next){state.lunchMode1201[date]??={mode:next};expandedLunch1207.clear();save();renderAll();return;}
  if(window.chtoPoestTransfer1202?.beforeModeChange&&!window.chtoPoestTransfer1202.beforeModeChange(date,next))return;
  const previousMeal=prev.original;
  // A prepared batch is real food: switching plans must not undo cooking or add stock.
