@@ -1,0 +1,68 @@
+/* v11.10.7 — quieter, less cluttered screens */
+
+/* Today: no aggregate counters. Individual meal and medicine checkmarks stay intact. */
+#today .day-progress-1198,
+#today .day-overview-1198,
+#today .secondary-med-calendar1207 {display:none!important}
+#today .day-intro-1198{margin-bottom:18px}
+
+/* Calendar: no completed-count widgets or technical notes. */
+#calendar .w-stats1203,
+#calendar .w-day-done1203,
+#calendar .w-foot1203>div:nth-child(2),
+#calendar #progress,
+#calendar #progress + .sub,
+#calendar .time-guide-hidden1207,
+#dayMenu .protein-context-1187,
+#dayMenu #nutriAudit1188,
+#dayMenu .nutrition-note:not(.actual-meal-note) {display:none!important}
+#calendar #progress:empty{display:none}
+#calendar .twocol .card:has(>h3:first-child + #progress){display:none!important}
+
+/* Slimmer green next-week planner. Keep the date and the real controls. */
+#calendar .sw-heading1204{padding:13px 16px;gap:8px}
+#calendar .sw-heading1204 h2{font-size:19px;margin:3px 0;line-height:1.2}
+#calendar .sw-heading1204>div>span{font-size:9px}
+#calendar .sw-heading1204 p{display:none!important}
+#calendar .sw-week1204{font-size:11px;padding:7px 10px}
+#calendar #smartWeek1204 summary{padding:11px 16px;font-size:12px}
+
+/* Hide long introductory copy directly under "Мой холодильник". */
+#kitchen1199 .k-toolbar1199 + .k-muted1199{display:none!important}
+
+/* Unobtrusive chosen lunch mode, with a clear way to change it. */
+.lunch-panel1201.lunch-compact1207{padding:9px 13px;margin:7px 0 10px;border-radius:13px;background:#f4f0e4;border-color:#e6ddce}
+.lunch-panel1201.lunch-compact1207 .lunch-header1201{margin:0;align-items:center}
+.lunch-panel1201.lunch-compact1207 .lunch-header1201 strong{font-size:12px;font-weight:750;color:#6b593e}
+.lunch-panel1201 .lunch-change1207{background:transparent;border:0;color:#826344;font-size:12px;font-weight:850;text-decoration:underline;text-underline-offset:3px;padding:5px}
+.lunch-panel1201.lunch-compact1207>.lunch-light1201{display:none!important}
+.lunch-panel1201.lunch-compact1207 .lunch-transfer1202{margin-top:9px}
+.lunch-panel1201.lunch-compact1207 .lunch-fact1201{margin-top:8px}
+#dashboard1198 .lunch-panel1201.lunch-compact1207{margin-bottom:5px}
+
+/* Each shopping trip opens and closes independently, without unmounting inputs. */
+#shop .purchase-fold1207{border:1px solid #e4d8c8;background:#fffefa;border-radius:17px;margin-top:12px;overflow:hidden}
+#shop .purchase-fold1207>summary{display:flex;align-items:center;gap:8px;padding:15px 16px;list-style:none;cursor:pointer;color:#60432f}
+#shop .purchase-fold1207>summary::-webkit-details-marker{display:none}
+#shop .purchase-title1207{flex:1;font-size:15px;font-weight:850}
+#shop .purchase-tag1207{font-size:11px;color:#90715b}
+#shop .purchase-arrow1207{font-size:20px;transition:transform .15s ease}
+#shop .purchase-fold1207[open] .purchase-arrow1207{transform:rotate(180deg)}
+#shop .purchase-fold1207>.card{margin:0!important;border:0!important;box-shadow:none!important;border-top:1px solid #efe5d8!important;border-radius:0!important}
+#shop .purchase-fold1207>.card>.row:first-child{display:none!important}
+#shop .purchase-fold1207>.card .shoprow{margin-top:2px}
+
+/* Product expiry notices: brown text rather than gray. */
+#storageHints1188,
+#storageHints1188 *,
+#today .secondary-details:has(summary) .details-body p.sub{color:#6b4933!important}
+#shop .notice:has(.expires),#shop .storage-hints{color:#6b4933!important}
+@media(max-width:760px){
+ #calendar .sw-heading1204{padding:12px}
+ #calendar .sw-heading1204 h2{font-size:18px}
+ #calendar .sw-week1204{margin-top:8px;font-size:10px}
+ #shop .purchase-fold1207>summary{padding:13px 12px}
+ #shop .purchase-title1207{font-size:13px}
+ #shop .purchase-tag1207{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){#shop .purchase-arrow1207{transition:none}}
