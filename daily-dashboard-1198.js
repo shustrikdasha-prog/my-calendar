@@ -25,7 +25,22 @@ const closeMenu=()=>{menu.hidden=true;more.setAttribute('aria-expanded','false')
 const toggleMenu=()=>{menu.hidden=!menu.hidden;more.setAttribute('aria-expanded',String(!menu.hidden))};
 more.addEventListener('click',toggleMenu);
 $('closeMore1198').addEventListener('click',closeMenu);
-menu.querySelectorAll('[data-go-1198]').forEach(btn=>btn.addEventListener('click',()=>{closeMenu();tabs.find(b=>b.dataset.tab===btn.dataset.go1198)?.click()}));
+// Navigate directly instead of forwarding a click to a display:none tab.
+ // Mobile Safari may ignore programmatic activation of hidden navigation buttons.
+function openSection1198(id){
+ const panel=document.getElementById(id);
+ if(!panel||!TAB_LABELS[id])return;
+ closeMenu();
+ document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p===panel));
+ tabs.forEach(b=>{const active=b.dataset.tab===id;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false')});
+ more.classList.toggle('section-active-1198',SECONDARY.includes(id));
+ try{renderAll()}catch(error){console.error('Ошибка обновления раздела «'+TAB_LABELS[id]+'»:',error)}
+ window.scrollTo({top:0,behavior:'instant'});
+}
+menu.querySelectorAll('[data-go-1198]').forEach(btn=>btn.addEventListener('click',event=>{
+ event.preventDefault();event.stopPropagation();
+ openSection1198(btn.getAttribute('data-go-1198'));
+}));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 document.addEventListener('click',e=>{if(!menu.hidden&&!menu.contains(e.target)&&!more.contains(e.target))closeMenu()});
 tabs.forEach(b=>b.addEventListener('click',()=>{
@@ -34,7 +49,7 @@ tabs.forEach(b=>b.addEventListener('click',()=>{
  more.classList.toggle('section-active-1198',isExtra);
  // In settings and recipes the visible navigation remains contextual.
 }));
-function go(id){tabs.find(b=>b.dataset.tab===id)?.click()}
+function go(id){openSection1198(id)}
 const today=$('today');
 const dash=document.createElement('section');dash.id='dashboard1198';dash.className='dashboard-1198';
 today.insertBefore(dash,today.querySelector('#todayContent'));
