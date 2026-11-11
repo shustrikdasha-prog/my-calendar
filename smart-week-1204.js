@@ -24,7 +24,12 @@ function ensureTarget(){
 function foodRecipes(){
  const all=Object.values(recipes()).filter(r=>{
   if(!r?.id||!Array.isArray(r.ingredients)||!r.ingredients.length||!Array.isArray(r.steps)||!r.steps.length)return false;
-  if(state.dislikedRecipes?.[r.id])return false;
+  if(state.dislikedRecipes?.[r.id]||state.recipeFeedback1188?.[r.id]==='no')return false;
+  // Personal workflow: batch meals must reheat well and be safe to prepare ahead.
+  // Fish and serve-immediately recipes remain available manually, especially at home.
+  const allSteps=(r.steps||[]).join(' ').toLowerCase();
+  if(/рыб|лосос|форел|треск|тунец/i.test(r.name||''))return false;
+  if(/пода(й|вать|ём) сразу|сразу пода|есть сразу после|не хранить/i.test(allSteps))return false;
   if(/десерт|слад|пудинг|сырник|запеканк|кекс|печень|желе|круассан|шоколад|йогурт|смузи|каша|овсян|гранола|тост|бутерброд|олад/i.test(r.name||''))return false;
   if(!/индей|куриц|говядин|рыб|суп|котлет|тефтел|тушен|чечевиц|фасол|нут|лосос|форел|овощ|филе|гречк|киноа|рагу/i.test(r.name||''))return false;
   return true;
@@ -270,6 +275,7 @@ function view(){
  if(reason?.fit>=0.6)labels.push('много ингредиентов уже дома');
  if(reason?.history===0)labels.push('не было в последние 2 недели');
  if(reason?.time)labels.push('время: '+reason.time);
+ if(reason?.fit>=0.2&&reason?.fit<0.6)labels.push('часть продуктов есть дома');
  if(reason?.family)labels.push('категория: '+reason.family.toLowerCase());
  return '<div><b>'+safe(name)+'</b><small>'+safe(labels.slice(0,3).join(' · ')||'подходящий рецепт')+'</small></div>';
  }).join('')+'</div>'+
@@ -280,7 +286,7 @@ function view(){
  '<button type="button" class="sw-apply1204" id="swApply1204">Применить этот план</button></div>':'';
  root.innerHTML='<div class="sw-heading1204"><div><span>ПЛАНИРОВЩИК</span><h2>Собрать следующую неделю</h2><p>Сначала выбери обеды и дни готовки. Мы покажем план, а изменения внесём только после подтверждения.</p></div><span class="sw-week1204">'+strDate(target)+' — '+strDate(addDays(target,6))+'</span></div>'+
  '<details id="swDetails1204" '+(draft?'open':'')+'><summary>Настроить меню на следующую неделю <span>→</span></summary>'+
- '<div class="sw-content1204"><h3>Как подбирать блюда?</h3><div class="sw-preferences1205" role="group" aria-label="Приоритеты подбора рецептов">'+
+ '<div class="sw-content1204"><div class="sw-personal1206"><b>Уже учитываем твои правила</b><p>Готовка максимум два раза в неделю · обеды из готовых порций · офисные контейнеры 500 и 240 мл · без приготовления свежего блюда в офисе · без рецептов с отметкой «Не повторять».</p><small>Рыбу и блюда, которые нужно подавать сразу, не планируем как многодневные заготовки. Их можно выбрать вручную на домашний день.</small></div><h3>Как подбирать блюда?</h3><div class="sw-preferences1205" role="group" aria-label="Приоритеты подбора рецептов">'+
  [['balanced','Баланс'],['pantry','Из продуктов дома'],['favorites','Любимые блюда']].map(([id,label])=>'<button type="button" data-sw-pref="'+id+'" class="'+(preference===id?'active':'')+'" aria-pressed="'+String(preference===id)+'">'+label+'</button>').join('')+
  '</div><p class="sw-hint1205">Учитываем отметки «Понравилось» и «Не повторять», продукты дома, время приготовления, разнообразие белковых продуктов и блюда последних двух недель. Это ориентировочный подбор, не медицинская оценка.</p><h3>Где обедаешь?</h3>'+modeRows+
  '<div class="sw-cook1204"><h3>Два дня готовки</h3><p>Первый день — в начале недели, второй — ближе к выходным. Выбирай день не позже первого блюда соответствующего цикла.</p><div>'+prep+'</div></div>'+
