@@ -28,6 +28,7 @@ $('closeMore1198').addEventListener('click',closeMenu);
 // Navigate directly instead of forwarding a click to a display:none tab.
  // Mobile Safari may ignore programmatic activation of hidden navigation buttons.
 function openSection1198(id){
+ if(id==='calendar'){const d=todayISO();current=weekStart(d);selected=d}
  const panel=document.getElementById(id);
  if(!panel||!TAB_LABELS[id])return;
  closeMenu();
@@ -44,6 +45,7 @@ menu.querySelectorAll('[data-go-1198]').forEach(btn=>btn.addEventListener('click
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 document.addEventListener('click',e=>{if(!menu.hidden&&!menu.contains(e.target)&&!more.contains(e.target))closeMenu()});
 tabs.forEach(b=>b.addEventListener('click',()=>{
+ if(b.dataset.tab==='calendar'){const d=todayISO();current=weekStart(d);selected=d}
  closeMenu();
  const isExtra=SECONDARY.includes(b.dataset.tab);
  more.classList.toggle('section-active-1198',isExtra);
