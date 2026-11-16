@@ -76,10 +76,18 @@ function rankedGroups(pool){
  const stocks=stockMap(),recent=recentRecipeCounts();
  const categories=[],usedNames=new Set(),details={};
  const weights=preference==='pantry'?{stock:21,favorite:5,repeat:4}:preference==='favorites'?{stock:5,favorite:18,repeat:4}:{stock:12,favorite:10,repeat:6};
+ // Personal preference: smaller starch sides, more non-starchy vegetables,
+ // especially frozen green beans. This only changes future suggestions.
+ const starchPenalty=r=>{
+  const list=(r.ingredients||[]).join(' ').toLowerCase();
+  const starch=/булгур|крупа|гречк|рис|макарон|картоф|киноа/.test(list)?8:0;
+  const veg=/фасол[ьи]|стручков|брокколи|кабачок|капуст/.test(list)?6:0;
+  return veg-starch;
+ };
  const base=pool.map(r=>{
   const history=recent[r.id]||0,fit=pantryFit(r,stocks),feedback=state.recipeFeedback1188?.[r.id];
   const like=!!state.favs?.[r.id]||feedback==='liked';
-  const score=fit*weights.stock+(like?weights.favorite:0)+(feedback==='ok'?2:0)+recipeTimeScore(r)-Math.min(4,history)*weights.repeat;
+  const score=fit*weights.stock+(like?weights.favorite:0)+(feedback==='ok'?2:0)+recipeTimeScore(r)+starchPenalty(r)-Math.min(4,history)*weights.repeat;
   details[r.id]={family:proteinFamily(r),fit,like,history,time:r.time||'не указано'};
   return {r,score};
  });
@@ -312,14 +320,13 @@ batchesForWeek=function(w=current){
  const plannedIds=new Set(schedule.jobs.map(j=>j.id));
  for(const plan of schedule.jobs){
   const uses=[];
-  for(const day of ww.days)for(const slot of [1,3]){
-   const meal=day.meals?.[slot];
-   if(meal?.recipeId===plan.id&&!meal.readyId&&day.date>=plan.date){
-    // Keep a recipe within the batch's cooking window, to avoid duplicates across cycles.
-    const next=state.smartPlans1204?.[w]?.cookingDates?.find(d=>d>plan.date);
-    if(next&&day.date>=next)continue;
-    uses.push({date:day.date,slot});
-   }
+  // Use the precise original planned occurrences, not a broad date window.
+  // This permits an earlier cooked meal to be eaten on the next cooking day,
+  // and avoids inventing duplicates after a meal is replaced.
+  for(const use of (Array.isArray(plan.uses)?plan.uses:[])){
+   const day=ww.days.find(d=>d.date===use.date);
+   const meal=day?.meals?.[use.slot];
+   if(meal?.recipeId===plan.id&&!meal.readyId&&!meal.outside&&!isDone('meal:'+use.date+':'+use.slot)&&use.date>=plan.date)uses.push({date:use.date,slot:use.slot});
   }
   if(!uses.length||!all[plan.id])continue;
   result.push({id:plan.id,recipe:all[plan.id],date:plan.date,uses,count:uses.length,freeze:uses.filter(u=>dayIndex(u.date)-dayIndex(plan.date)>2).length,key:'cook:'+plan.date+':'+plan.id});
