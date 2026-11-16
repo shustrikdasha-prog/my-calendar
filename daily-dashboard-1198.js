@@ -45,7 +45,7 @@ menu.querySelectorAll('[data-go-1198]').forEach(btn=>btn.addEventListener('click
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 document.addEventListener('click',e=>{if(!menu.hidden&&!menu.contains(e.target)&&!more.contains(e.target))closeMenu()});
 tabs.forEach(b=>b.addEventListener('click',()=>{
- if(b.dataset.tab==='calendar'){const d=todayISO();current=weekStart(d);selected=d}
+ if(b.dataset.tab==='calendar'){const d=todayISO();current=weekStart(d);selected=d;renderAll()}
  closeMenu();
  const isExtra=SECONDARY.includes(b.dataset.tab);
  more.classList.toggle('section-active-1198',isExtra);
