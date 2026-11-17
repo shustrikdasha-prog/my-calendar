@@ -172,8 +172,14 @@ function finishEarly(){
  save();return true;
 }
 function earlyCook(week,job){
- const date=today();
- if(job.date<=date||cookingCompleted(week,job))return;
+ if(cookingCompleted(week,job))return;
+ const proposed=job.date===today()?addDays(today(),-1):today();
+ const date=prompt('Когда ты фактически приготовила блюдо? Введи дату ГГГГ-ММ-ДД.',proposed);
+ if(date===null)return;
+ if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||date<week||date>=job.date||date>today()||
+    new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date){
+  alert('Укажи действительную дату раньше запланированной готовки, в пределах этой недели.');return;
+ }
  const r=recipes()[job.id];if(!r)return;
  const actual={date,id:job.id,recipe:r,uses:job.uses||[],count:job.count||job.uses?.length||1,
   freeze:job.freeze||0,key:'cook:'+date+':'+job.id};
@@ -191,6 +197,7 @@ function show(){
  const missed=pending.filter(j=>j.date<now);
  const todayJobs=pending.filter(j=>j.date===now);
  const next=jobs.filter(j=>!cookingCompleted(week,j)&&j.date>now).sort((a,b)=>a.date.localeCompare(b.date));
+ const earlyCandidates=[...todayJobs,...next].filter(j=>j.date>week);
  const history=records()[week]?.actionLog?.[0];
  if(!pending.length&&!next.length&&!history)return;
  const root=document.createElement('section');
@@ -201,8 +208,8 @@ function show(){
  (missedDays.length?'<div class="cr-info1211"><strong>Не отмечена готовка: '+missedDays.map(strDate).join(', ')+'</strong><p>Отсутствие отметки не означает, что блюдо не приготовлено. Если действительно не готовила, перенесём блюда и закупки на следующий день.</p>'+
  missedDays.map(d=>'<button type="button" data-cr-skip="'+d+'">Не готовила '+safe(strDate(d))+' · перестроить план</button>').join('')+'</div>':'')+
  (todayJobs.length?'<div class="cr-info1211"><strong>Сегодня: '+cookingLabels(todayJobs)+'</strong><p>Если не готовишь сегодня, выбери перенос. Изменения в еде будут показаны до сохранения.</p><button type="button" data-cr-skip="'+now+'">Сегодня не готовлю →</button></div>':'')+
- (next.length?'<div class="cr-info1211"><strong>Если уже приготовила раньше</strong><p>Укажи фактическое количество порций через обычную отметку готовки — холодильник, покупки и даты обновятся по факту.</p>'+
- next.slice(0,4).map(j=>'<button type="button" class="cr-secondary1211" data-cr-early="'+safe(j.id)+'" data-cr-day="'+safe(j.date)+'">'+safe(recipes()[j.id]?.name||j.id)+' · приготовила раньше</button>').join('')+'</div>':'')+
+ (earlyCandidates.length?'<div class="cr-info1211"><strong>Если уже приготовила раньше</strong><p>Выбери фактическую дату и количество порций. Холодильник и план готовки обновятся по отметке.</p>'+
+ earlyCandidates.slice(0,4).map(j=>'<button type="button" class="cr-secondary1211" data-cr-early="'+safe(j.id)+'" data-cr-day="'+safe(j.date)+'">'+safe(recipes()[j.id]?.name||j.id)+' · приготовила раньше</button>').join('')+'</div>':'')+
  (history?'<p class="cr-history1211">'+(history.kind==='deferred'?'Перенесено: '+safe(strDate(history.from))+' → '+safe(strDate(history.to)):'Приготовлено раньше: '+safe(history.name||''))+'</p>':'')+
  (records()[week]?.undo?.length?'<button type="button" class="cr-undo1211">Отменить последний перенос</button>':'');
  const calendarRoot=document.getElementById('weekOverview1203');
@@ -213,7 +220,7 @@ function show(){
   if(v===true)renderAll();
  });
  root.querySelectorAll('[data-cr-early]').forEach(btn=>btn.onclick=()=>{
-  const j=next.find(j=>j.id===btn.dataset.crEarly&&j.date===btn.dataset.crDay);
+  const j=earlyCandidates.find(j=>j.id===btn.dataset.crEarly&&j.date===btn.dataset.crDay);
   if(j)earlyCook(week,j);
  });
  root.querySelector('.cr-undo1211')?.addEventListener('click',()=>undoLatest(week));
