@@ -102,9 +102,9 @@ function movePlan(w,j){
  if(d.edits.some(e=>JSON.stringify(dayBy(w,e.date)?.meals?.[e.slot])!==JSON.stringify(e.before)||
    isDone(mealKeyOf(e.date,e.slot)))){alert('Меню поменялось. Пересчитай перенос.');renderAll();return}
  state.replanUndo1208??={};
- const prev=state.replanUndo1208[w];
  // Undo only the most recent shift, until another replan.
- state.replanUndo1208[w]={oldJob:clone(j),newJob:clone(d.projected),
+ const beforeShop=clone(state.shopDates?.[w]||null);
+ state.replanUndo1208[w]={oldJob:clone(j),newJob:clone(d.projected),beforeShop,
    changes:clone(d.edits),carryIds:d.carry.map(x=>x.id),at:new Date().toISOString()};
  for(const e of d.edits)dayBy(w,e.date).meals[e.slot]=clone(e.after);
  const index=plans(w).findIndex(x=>x.id===j.id&&x.date===j.date);
@@ -121,6 +121,7 @@ function movePlan(w,j){
  const bought=!!state.checks?.['shopping-trip:'+w+':'+batchIndex]||
    Object.keys(state.purchaseLog||{}).some(k=>k.startsWith(w+'|'+batchIndex+'|'));
  if(!bought&&existing&&existing<today)state.shopDates[w][label]=today;
+ state.replanUndo1208[w].afterShop=clone(state.shopDates[w]);
  save();renderAll();
  alert('Готовка и оставшиеся блюда перенесены. Другие блюда, которым понадобилось уступить место, сохранены ниже в очереди. Проверь список покупок.');
 }
@@ -138,13 +139,19 @@ function undoShift(w){
  for(const e of record.changes)dayBy(w,e.date).meals[e.slot]=clone(e.before);
  state.smartBatches1204[w].jobs[idx]=clone(record.oldJob);
  state.postponedMeals1208=pending().filter(x=>!record.carryIds.includes(x.id));
+ if(JSON.stringify(state.shopDates?.[w]||null)===JSON.stringify(record.afterShop)){
+  if(record.beforeShop)state.shopDates[w]=clone(record.beforeShop);
+  else delete state.shopDates?.[w];
+ }
  delete state.replanDismissed1208?.[noteId(w,record.oldJob)];
  delete state.replanUndo1208[w];
  save();renderAll();
 }
-function dismiss(w,j){
- state.replanDismissed1208??={};state.replanDismissed1208[noteId(w,j)]=true;
- save();renderAll();
+function markPreviouslyCooked(w,j){
+ const recipe=recipes()[j.id];if(!recipe)return;
+ if(state.cookDone?.[keyFor(j.date,j.id)]){renderAll();return}
+ if(!confirm('Ты действительно приготовила «'+recipe.name+'», но не отметила? Внеси фактическое количество порций. Дата будет сегодняшней; если готовила раньше, поправь дату порций в «Моём холодильнике».'))return;
+ cookJob({id:j.id,recipe,count:j.count||j.uses?.length||1,freeze:0,date:j.date,key:keyFor(j.date,j.id),uses:j.uses});
 }
 function recordEarly(key){
  const job=batchesForWeek(current).find(j=>j.key===key);
@@ -166,7 +173,7 @@ function panelHTML(w){
   const name=recipes()[j.id]?.name||j.id;
   return '<div class="replan-row1208"><div><strong>'+esc(name)+'</strong><small>План: '+esc(strDate(j.date))+' · '+j.count+' порц. Готовка не отмечена.</small></div>'+
    '<button type="button" data-replan-move="'+esc(j.id)+'">Перенести с едой →</button>'+
-   '<button type="button" class="replan-muted1208" data-replan-dismiss="'+esc(j.id)+'">Я уже готовила</button></div>';
+   '<button type="button" class="replan-muted1208" data-replan-finished="'+esc(j.id)+'">Готовила, не отметила</button></div>';
  }).join('');
  const early=upcoming.length?'<details class="replan-early1208"><summary>Приготовила заранее? Отметить сейчас</summary>'+
  upcoming.map(j=>'<div class="replan-row1208"><div><strong>'+esc(j.recipe.name)+'</strong><small>Запланировано: '+esc(strDate(j.date))+' · '+j.count+' порц.</small></div>'+
@@ -186,9 +193,9 @@ function renderPanel(){
  if(anchor)anchor.insertAdjacentHTML('afterend',html);else cal.insertAdjacentHTML('afterbegin',html);
  const host=document.getElementById('reactivePlan1208');
  host.querySelectorAll('[data-replan-move]').forEach(b=>b.onclick=()=>{const j=missed(current).find(x=>x.id===b.dataset.replanMove);if(j)movePlan(current,j)});
- host.querySelectorAll('[data-replan-dismiss]').forEach(b=>b.onclick=()=>{
-  const j=missed(current).find(x=>x.id===b.dataset.replanDismiss);
-  if(j&&confirm('Скрыть напоминание? Если ты действительно готовила, обязательно отметь приготовление в «Кухне» — иначе порции не появятся в запасах.'))dismiss(current,j);
+ host.querySelectorAll('[data-replan-finished]').forEach(b=>b.onclick=()=>{
+  const j=missed(current).find(x=>x.id===b.dataset.replanFinished);
+  if(j)markPreviouslyCooked(current,j);
  });
  host.querySelectorAll('[data-replan-early]').forEach(b=>b.onclick=()=>recordEarly(b.dataset.replanEarly));
  host.querySelector('#replanUndo1208')?.addEventListener('click',()=>undoShift(current));
