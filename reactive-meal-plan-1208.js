@@ -221,8 +221,14 @@ function renderPanel(){
 // A day change is an explicit signal that yesterday's unmarked cooking was missed.
 // We make a conservative automatic adjustment, preserving the displaced meals
 // in the queue and a reversible journal. We never infer that actual portions exist.
+function cloudSettled(){
+ const status=document.getElementById('quickCloudText')?.textContent||'';
+ // Never auto-edit a stale local snapshot while a signed-in cloud session
+ // is still restoring. A local-only installation can still use manual buttons.
+ return /синхронизировано|синхронизация включена/i.test(status);
+}
 function reconcileMissed(){
- if(autoBusy)return false;
+ if(autoBusy||!cloudSettled())return false;
  const w=weekStart(todayISO());
  if(current!==w||!getWeekIfExists(w))return false;
  autoBusy=true;
@@ -240,5 +246,14 @@ function reconcileMissed(){
 const renderCalendarBefore=renderCalendar;
 renderCalendar=function(){reconcileMissed();renderCalendarBefore();renderPanel()};
 document.querySelectorAll('.footer').forEach(e=>e.textContent='Версия 11.10.8');
-if(reconcileMissed())renderAll();else renderPanel();
+// Sync completion can occur after the first render. React only to confirmed
+// cloud restoration, never to an incomplete local snapshot.
+const cloudLabel=document.getElementById('quickCloudText');
+if(cloudLabel&&typeof MutationObserver==='function'){
+ const watcher=new MutationObserver(()=>{
+  if(cloudSettled()&&reconcileMissed())renderAll();
+ });
+ watcher.observe(cloudLabel,{childList:true,characterData:true,subtree:true});
+}
+renderPanel();
 })();
