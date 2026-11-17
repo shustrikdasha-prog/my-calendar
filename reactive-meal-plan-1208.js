@@ -33,13 +33,30 @@ function plannedEarly(w){
 function oldMeal(w,at){
  return dayBy(w,at.date)?.meals?.[at.slot];
 }
+function readyForToday(w,date,slot,recipeId){
+ const ww=getWeekIfExists(w);
+ const planned=new Map();
+ for(const day of ww?.days||[])for(const m of day.meals||[]){
+  if(m?.readyId)planned.set(m.readyId,(planned.get(m.readyId)||0)+1);
+ }
+ const used=state.mealConsumed||{};
+ for(const row of state.ready||[]){
+  if(row.place!=='fridge'||!row.recipeId||row.recipeId===recipeId||!Number(row.qty)||isReadyExpired(row))continue;
+  // Only use containers that have a verified cook date no later than today.
+  if(!row.date||row.date>date||Number(row.qty)<=(planned.get(row.id)||0))continue;
+  const r=recipes()[row.recipeId];
+  if(!r)continue;
+  return {title:r.name,recipeId:r.id,readyId:row.id,kcal:0};
+ }
+ return {title:'Выбери готовое блюдо или покупной обед — готовка перенесена',recipeId:null,kcal:0,needsChoice:true};
+}
 function makeDraft(w,j){
  const today=todayISO(),days=getWeekIfExists(w)?.days||[];
  if(!days.length||today>WEEKEND(w))return null;
  const edits=[],carry=[],newUses=[];
  // Past consumed or explicitly recorded meals mean there may have been a real cook;
  // never infer a missed batch in that situation.
- if((j.uses||[]).some(u=>u.date<today&&
+ if((j.uses||[]).some(u=>u.date<=today&&
      (isDone(mealKeyOf(u.date,u.slot))||state.mealConsumed?.[mealKeyOf(u.date,u.slot)]||state.actualMeals?.[u.date+':'+u.slot]))){
   return {blocked:'Одно из блюд этой партии уже отмечено съеденным. Сначала отметь фактическую готовку, чтобы не создать дубликаты.'};
  }
@@ -89,6 +106,15 @@ function makeDraft(w,j){
    reason:'Освободили место для перенесённого блюда'});
   reserve(destination.date,u.slot,source);
   newUses.push({date:destination.date,slot:u.slot});
+ }
+ // An unprepared meal planned for today must not remain misleadingly shown
+ // as available food. Prefer a real unallocated fridge portion; otherwise ask
+ // for a choice. Historical past-day meals stay untouched for audit.
+ for(const u of slots){
+  if(u.date!==today)continue;
+  const source=oldMeal(w,u);
+  if(!source||source.recipeId!==j.id||source.readyId||isDone(mealKeyOf(today,u.slot)))continue;
+  reserve(today,u.slot,readyForToday(w,today,u.slot,j.id));
  }
  const projected=clone(j);
  projected.date=today;
