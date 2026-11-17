@@ -33,19 +33,19 @@ function plannedEarly(w){
 function oldMeal(w,at){
  return dayBy(w,at.date)?.meals?.[at.slot];
 }
-function readyForToday(w,date,slot,recipeId){
+function readyForToday(w,date,slot,recipeId,reserved){
  const ww=getWeekIfExists(w);
  const planned=new Map();
  for(const day of ww?.days||[])for(const m of day.meals||[]){
   if(m?.readyId)planned.set(m.readyId,(planned.get(m.readyId)||0)+1);
  }
- const used=state.mealConsumed||{};
  for(const row of state.ready||[]){
   if(row.place!=='fridge'||!row.recipeId||row.recipeId===recipeId||!Number(row.qty)||isReadyExpired(row))continue;
   // Only use containers that have a verified cook date no later than today.
-  if(!row.date||row.date>date||Number(row.qty)<=(planned.get(row.id)||0))continue;
+  if(!row.date||row.date>date||Number(row.qty)<=(planned.get(row.id)||0)+(reserved.get(row.id)||0))continue;
   const r=recipes()[row.recipeId];
   if(!r)continue;
+  reserved.set(row.id,(reserved.get(row.id)||0)+1);
   return {title:r.name,recipeId:r.id,readyId:row.id,kcal:0};
  }
  return {title:'Выбери готовое блюдо или покупной обед — готовка перенесена',recipeId:null,kcal:0,needsChoice:true};
@@ -60,7 +60,7 @@ function makeDraft(w,j){
      (isDone(mealKeyOf(u.date,u.slot))||state.mealConsumed?.[mealKeyOf(u.date,u.slot)]||state.actualMeals?.[u.date+':'+u.slot]))){
   return {blocked:'Одно из блюд этой партии уже отмечено съеденным. Сначала отметь фактическую готовку, чтобы не создать дубликаты.'};
  }
- const scratch=new Map();
+ const scratch=new Map(),reservedReady=new Map();
  const read=(date,slot)=>{
   const k=date+'|'+slot;
   return scratch.has(k)?scratch.get(k):dayBy(w,date)?.meals?.[slot];
@@ -114,7 +114,7 @@ function makeDraft(w,j){
   if(u.date!==today)continue;
   const source=oldMeal(w,u);
   if(!source||source.recipeId!==j.id||source.readyId||isDone(mealKeyOf(today,u.slot)))continue;
-  reserve(today,u.slot,readyForToday(w,today,u.slot,j.id));
+  reserve(today,u.slot,readyForToday(w,today,u.slot,j.id,reservedReady));
  }
  const projected=clone(j);
  projected.date=today;
