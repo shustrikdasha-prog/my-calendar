@@ -19,3 +19,12 @@
 .replan-backlog1208>div button,.replan-undo1208{border:1px solid #e3d5c6;background:#faf4ec;color:#755640;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:750;cursor:pointer}
 .replan-undo1208{margin-top:8px}
 @media(max-width:760px){.replan1208{padding:14px 13px;border-radius:17px}.replan-row1208 button{flex:1;min-width:118px}.replan-backlog1208>div{flex-wrap:wrap}.replan-backlog1208>div small{min-width:65px}}
+
+/* Today's small notification; never obstruct meal controls. */
+.replan-home1208{display:flex;align-items:center;gap:12px;background:#edf1e5;color:#48603d;border:1px solid #cfdbc7;border-radius:16px;padding:13px 15px;margin:0 0 13px}
+.replan-home1208>div{min-width:0;flex:1}
+.replan-home1208 b{font-size:13px;line-height:1.35;display:block}
+.replan-home1208 p{font-size:11px;line-height:1.4;color:#6f805e;margin:4px 0 0}
+.replan-home1208 button{border:1px solid #c5d2bd;border-radius:99px;background:#fffefa;color:#4e6947;padding:9px 12px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.replan-home1208 [data-replan-hide]{border:0;background:transparent;font-size:20px;padding:4px}
+@media(max-width:760px){.replan-home1208{gap:7px;padding:12px 10px}.replan-home1208 button{padding:8px 7px;font-size:10px}.replan-home1208 b{font-size:12px}}
