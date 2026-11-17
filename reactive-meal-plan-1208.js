@@ -92,6 +92,7 @@ function makeDraft(w,j){
   blocked:projected.count?'': 'На этой неделе не осталось приёмов для этого блюда. Его можно вернуть из списка перенесённых блюд вручную.'};
 }
 function movePlan(w,j,automatic=false){
+ const today=todayISO();
  const d=makeDraft(w,j);
  if(!d){if(!automatic)alert('Для этого периода нет доступного плана.');return false}
  if(d.blocked){if(!automatic)alert(d.blocked);return false}
