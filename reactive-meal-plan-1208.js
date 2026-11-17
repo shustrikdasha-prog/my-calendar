@@ -230,7 +230,7 @@ function cloudSettled(){
 function reconcileMissed(){
  if(autoBusy||!cloudSettled())return false;
  const w=weekStart(todayISO());
- if(current!==w||!getWeekIfExists(w))return false;
+ if(!getWeekIfExists(w))return false;
  autoBusy=true;
  let moved=false;
  try{
