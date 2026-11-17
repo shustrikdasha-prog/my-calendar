@@ -105,8 +105,11 @@ function postpone(week,from,automatic=false){
  if(!automatic){
   const lines=list.map(p=>'• '+recipes()[p.id]?.name).join('\n');
   const swaps=needed.map(n=>'• '+strDate(n.date)+', '+slotNames[n.slot]+': '+n.next.detail).join('\n');
-  if(!confirm('Перенести готовку '+strDate(from)+' → '+strDate(target)+'?\n\n'+lines+
-   (swaps?'\n\nБлюда до новой готовки будут заменены:\n'+swaps:'')+
+  const cancelled=list.filter(p=>(p.uses||[]).every(u=>
+   needed.some(n=>n.date===u.date&&n.slot===u.slot)));
+  const cancelText=cancelled.length?'\n\nЭти партии больше не нужны по оставшемуся меню и будут сняты с готовки: '+cancelled.map(j=>recipes()[j.id]?.name||j.id).join(', ')+'.':'';
+  if(!confirm('Перенести запланированную готовку '+strDate(from)+' → '+strDate(target)+'?\n\n'+lines+
+   (swaps?'\n\nДо новой готовки предлагаются замены:\n'+swaps:'')+cancelText+
    '\n\nРеальные запасы и отметки съеденного не изменятся. Последний перенос можно отменить.'))return false;
  }
  snapshots(week);
