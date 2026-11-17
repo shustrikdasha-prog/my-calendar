@@ -12,11 +12,17 @@ const plans=w=>(state.smartBatches1204?.[w]?.jobs||[]);
 const pending=()=>Array.isArray(state.postponedMeals1208)?state.postponedMeals1208:[];
 const noteId=(w,j)=>w+'|'+j.id+'|'+j.date;
 const finished=(j)=>!!state.cookDone?.[keyFor(j.date,j.id)];
-let lastPrompted='';
+let autoBusy=false;
+function readyCovers(j){
+ const available=(state.ready||[]).filter(x=>x.recipeId===j.id&&Number(x.qty)>0&&!isReadyExpired(x))
+  .reduce((n,x)=>n+Number(x.qty),0);
+ const stillNeeded=(j.uses||[]).filter(u=>u.date>=todayISO()&&!isDone(mealKeyOf(u.date,u.slot))).length;
+ return stillNeeded>0&&available>=stillNeeded;
+}
 function missed(w){
  const today=todayISO();
  if(today<w||today>WEEKEND(w))return [];
- return plans(w).filter(j=>j.date<today&&!finished(j)&&
+ return plans(w).filter(j=>j.date<today&&!finished(j)&&!readyCovers(j)&&
    !state.replanDismissed1208?.[noteId(w,j)]&&j.uses?.length);
 }
 function plannedEarly(w){
@@ -85,22 +91,22 @@ function makeDraft(w,j){
  return {week:w,job:clone(j),projected,edits,carry,
   blocked:projected.count?'': 'На этой неделе не осталось приёмов для этого блюда. Его можно вернуть из списка перенесённых блюд вручную.'};
 }
-function movePlan(w,j){
+function movePlan(w,j,automatic=false){
  const d=makeDraft(w,j);
- if(!d){alert('Для этого периода нет доступного плана.');return}
- if(d.blocked){alert(d.blocked);return}
+ if(!d){if(!automatic)alert('Для этого периода нет доступного плана.');return false}
+ if(d.blocked){if(!automatic)alert(d.blocked);return false}
  const changed=d.edits.length;
  const description='Готовка: '+esc(j.id)+' → '+strDate(d.projected.date)+
    '\nЗапланированных порций: '+d.projected.count+
    '\nПеремещено блюд: '+changed+
    '\nДругих блюд в очереди на перестановку: '+d.carry.length+
    '\n\nСъеденные блюда, история прошлых дней, фактические запасы и лекарства не меняются. Перемещённые из меню блюда сохраняются в отдельной очереди. Продолжить?';
- if(!confirm(description))return;
+ if(!automatic&&!confirm(description))return false;
  // Compute again before making changes to detect concurrent updates to the menu.
  const latest=plans(w).find(x=>x.id===j.id&&x.date===j.date);
- if(!latest||JSON.stringify(latest)!==JSON.stringify(j)){alert('План уже обновился. Открой этот блок заново.');renderAll();return}
+ if(!latest||JSON.stringify(latest)!==JSON.stringify(j)){if(!automatic)alert('План уже обновился. Открой этот блок заново.');return false}
  if(d.edits.some(e=>JSON.stringify(dayBy(w,e.date)?.meals?.[e.slot])!==JSON.stringify(e.before)||
-   isDone(mealKeyOf(e.date,e.slot)))){alert('Меню поменялось. Пересчитай перенос.');renderAll();return}
+   isDone(mealKeyOf(e.date,e.slot)))){if(!automatic)alert('Меню поменялось. Пересчитай перенос.');return false}
  state.replanUndo1208??={};
  // Undo only the most recent shift, until another replan.
  const beforeShop=clone(state.shopDates?.[w]||null);
@@ -108,7 +114,7 @@ function movePlan(w,j){
    changes:clone(d.edits),carryIds:d.carry.map(x=>x.id),at:new Date().toISOString()};
  for(const e of d.edits)dayBy(w,e.date).meals[e.slot]=clone(e.after);
  const index=plans(w).findIndex(x=>x.id===j.id&&x.date===j.date);
- if(index<0)return;
+ if(index<0)return false;
  state.smartBatches1204[w].jobs[index]=d.projected;
  state.postponedMeals1208??=[];
  state.postponedMeals1208.push(...d.carry);
@@ -122,11 +128,14 @@ function movePlan(w,j){
    Object.keys(state.purchaseLog||{}).some(k=>k.startsWith(w+'|'+batchIndex+'|'));
  if(!bought&&existing&&existing<today)state.shopDates[w][label]=today;
  state.replanUndo1208[w].afterShop=clone(state.shopDates[w]);
- save();renderAll();
- alert('Готовка и оставшиеся блюда перенесены. Другие блюда, которым понадобилось уступить место, сохранены ниже в очереди. Проверь список покупок.');
+ state.replanStack1208??={};state.replanStack1208[w]??=[];
+ state.replanStack1208[w].push(clone(state.replanUndo1208[w]));
+ save();
+ if(!automatic){renderAll();alert('Готовка и оставшиеся блюда перенесены. Другие блюда сохранены ниже в очереди. Проверь список покупок.');}
+ return true;
 }
 function undoShift(w){
- const record=state.replanUndo1208?.[w];
+ const record=state.replanStack1208?.[w]?.at(-1)||state.replanUndo1208?.[w];
  if(!record||!confirm('Отменить последний перенос?'))return;
  const now=plans(w).find(j=>j.id===record.newJob.id&&j.date===record.newJob.date);
  if(!now||JSON.stringify(now)!==JSON.stringify(record.newJob)){alert('Готовка уже изменена, автоматическая отмена недоступна.');return}
@@ -144,7 +153,11 @@ function undoShift(w){
   else delete state.shopDates?.[w];
  }
  delete state.replanDismissed1208?.[noteId(w,record.oldJob)];
- delete state.replanUndo1208[w];
+ if(state.replanStack1208?.[w]?.length){
+  state.replanStack1208[w].pop();
+  state.replanUndo1208[w]=state.replanStack1208[w].at(-1)||null;
+ }else delete state.replanUndo1208[w];
+ if(!state.replanUndo1208[w])delete state.replanUndo1208[w];
  save();renderAll();
 }
 function markPreviouslyCooked(w,j){
@@ -205,8 +218,27 @@ function renderPanel(){
   state.postponedMeals1208=pending().filter(y=>y.id!==x.id);save();renderAll();
  });
 }
+// A day change is an explicit signal that yesterday's unmarked cooking was missed.
+// We make a conservative automatic adjustment, preserving the displaced meals
+// in the queue and a reversible journal. We never infer that actual portions exist.
+function reconcileMissed(){
+ if(autoBusy)return false;
+ const w=weekStart(todayISO());
+ if(current!==w||!getWeekIfExists(w))return false;
+ autoBusy=true;
+ let moved=false;
+ try{
+  const jobs=missed(w);
+  for(const job of jobs){
+   const draft=makeDraft(w,job);
+   if(!draft||draft.blocked)continue;
+   if(movePlan(w,job,true))moved=true;
+  }
+ }finally{autoBusy=false}
+ return moved;
+}
 const renderCalendarBefore=renderCalendar;
-renderCalendar=function(){renderCalendarBefore();renderPanel()};
+renderCalendar=function(){reconcileMissed();renderCalendarBefore();renderPanel()};
 document.querySelectorAll('.footer').forEach(e=>e.textContent='Версия 11.10.8');
-renderPanel();
+if(reconcileMissed())renderAll();else renderPanel();
 })();
