@@ -824,8 +824,8 @@ function cookJob(job){let r=recipes()[job.id];if(!r)return;let qty=job.count;
   let used=editableIngredients(r,count),available=stockMap(),missing=used.filter(x=>(available.get(namedUnit(x.name,x.unit))||0)+.01<x.qty);
   if(missing.length&&!confirm('Не все ингредиенты числятся в запасах. Списать то, что есть, и добавить готовые порции?\n\n'+missing.map(x=>x.name+' — '+x.qty+' '+x.unit).join('\n')))return false;
   const debits=used.map(x=>({...x,qty:Math.min(x.qty,stockMap().get(namedUnit(x.name,x.unit))||0)}));debits.forEach(x=>increaseStock(x.name,x.unit,-x.qty));
-  let created=[];if(count-fr>0){let x={id:safeId(),recipeId:r.id,name:r.name,qty:count-fr,place:'fridge',date:job.date};state.ready.push(x);created.push(x.id)}if(fr>0){let x={id:safeId(),recipeId:r.id,name:r.name,qty:fr,place:'freezer',date:job.date};state.ready.push(x);created.push(x.id)}
-  state.cookDone[job.key]={count,freeze:fr,used:debits,created};save();renderAll();return true;
+  let created=[];if(count-fr>0){let x={id:safeId(),recipeId:r.id,name:r.name,qty:count-fr,place:'fridge',date:todayISO()};state.ready.push(x);created.push(x.id)}if(fr>0){let x={id:safeId(),recipeId:r.id,name:r.name,qty:fr,place:'freezer',date:todayISO()};state.ready.push(x);created.push(x.id)}
+  state.cookDone[job.key]={count,freeze:fr,used:debits,created,actualDate:todayISO()};save();renderAll();return true;
  });
 }
 function undoCook(job){let done=state.cookDone[job.key];if(!done||!confirm('Отменить приготовление? Списанные ингредиенты вернутся в запасы, а оставшиеся порции этой заготовки будут удалены.'))return;
