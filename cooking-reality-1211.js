@@ -141,9 +141,13 @@ function undoLatest(week){
    alert('Одно из изменённых блюд уже отмечено съеденным. Автоматический откат заблокирован.');return;
   }
  }
- if(s.plan?.jobs?.some(j=>state.cookDone?.['cook:'+j.date+':'+j.id])||
-    scheduled(week).some(j=>state.cookDone?.['cook:'+j.date+':'+j.id])){
-  alert('После переноса была отмечена готовка. Для безопасности нельзя откатить её расписание автоматически.');return;
+ const former=s.plan?.jobs||[],nowJobs=scheduled(week);
+ const changedIds=[...new Set([...former,...nowJobs].map(j=>j.id))].filter(id=>{
+  const a=former.find(j=>j.id===id),b=nowJobs.find(j=>j.id===id);
+  return JSON.stringify(a||null)!==JSON.stringify(b||null);
+ });
+ if(changedIds.some(id=>[...former,...nowJobs].some(j=>j.id===id&&state.cookDone?.['cook:'+j.date+':'+j.id]))){
+  alert('Для одного из перенесённых блюд уже отмечена готовка. Автоматический откат заблокирован, чтобы сохранить учёт порций.');return;
  }
  if(s.week)state.weeks[week]=clone(s.week);else delete state.weeks[week];
  if(s.plan)state.smartBatches1204[week]=clone(s.plan);else delete state.smartBatches1204[week];
