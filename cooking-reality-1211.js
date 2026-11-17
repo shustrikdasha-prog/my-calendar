@@ -7,7 +7,6 @@
 const boxId='cookingReality1211';
 const safe=x=>escapes(String(x??''));
 const records=()=>{state.cookingReality1211??={};return state.cookingReality1211};
-const originalJobs=batchesForWeek;
 const previousRender=renderAll;
 const originalCook=cookJob;
 let pendingEarly=null,working=false;
@@ -86,11 +85,14 @@ function replacementFor(date,used,excluded){
 function postpone(week,from,automatic=false){
  const list=scheduled(week).filter(p=>p.date===from&&!cookingCompleted(week,p));
  if(!list.length)return false;
- const target=addDays(from,1);
- if(weekStart(target)!==week||target<today())return false;
+ const tomorrow=addDays(from,1);
+ const target=tomorrow<today()?today():tomorrow;
+ if(weekStart(target)!==week)return false;
  const needed=[],used={};
  for(const p of list)for(const u of p.uses||[]){
-  if(u.date>=target||protectedMeal(u.date,u.slot)||u.date<today())continue;
+  // Dinner can follow the cooking session; lunch on the same day cannot
+  // safely be assumed available before cooking. Handle it as a conflict.
+  if((u.date>target||(u.date===target&&u.slot!==1))||protectedMeal(u.date,u.slot)||u.date<today())continue;
   const old=mealAt(u.date,u.slot);
   if(old?.recipeId!==p.id)continue;
   const next=replacementFor(u.date,used,p.id);
@@ -114,6 +116,8 @@ function postpone(week,from,automatic=false){
   for(const k of Object.keys(meal))if(!(k in n.next.meal))delete meal[k];
  }
  for(const p of list){p.date=target;p.uses=(p.uses||[]).filter(u=>mealAt(u.date,u.slot)?.recipeId===p.id);}
+ // If no planned meals still need a batch, do not schedule unnecessary cooking.
+ state.smartBatches1204[week].jobs=scheduled(week).filter(p=>p.uses?.length||cookingCompleted(week,p));
  syncDays(week);adjustShopping(week,from,target);
  r[week].actionLog.unshift({kind:'deferred',date:today(),from,to:target,automatic,changes:needed.length});
  if(r[week].actionLog.length>7)r[week].actionLog.length=7;
@@ -160,7 +164,6 @@ function finishEarly(){
 function earlyCook(week,job){
  const date=today();
  if(job.date<=date||cookingCompleted(week,job))return;
- const original=originalJobs(week).find(j=>j.id===job.id&&j.date===job.date);
  const r=recipes()[job.id];if(!r)return;
  const actual={date,id:job.id,recipe:r,uses:job.uses||[],count:job.count||job.uses?.length||1,
   freeze:job.freeze||0,key:'cook:'+date+':'+job.id};
@@ -209,7 +212,7 @@ function show(){
  mini.innerHTML='<b>Готовка: '+(missed.length?'есть неотмеченная готовка':todayJobs.length?'запланирована сегодня':'ближайшая '+(next[0]?strDate(next[0].date):'проверена'))+'</b><button type="button">Изменить план →</button>';
  const dashboard=document.getElementById('dashboard1198');
  if(dashboard)dashboard.insertAdjacentElement('afterend',mini);else todaySection.insertBefore(mini,todaySection.firstChild);
- mini.querySelector('button').onclick=()=>{document.querySelector('[data-tab="calendar"]')?.click();root.scrollIntoView({behavior:'smooth',block:'start'})};
+ mini.querySelector('button').onclick=()=>{document.querySelector('[data-tab="calendar"]')?.click();document.getElementById(boxId)?.scrollIntoView({behavior:'smooth',block:'start'})};
 }
 renderAll=function(){
  if(!working){working=true;try{finishEarly()}catch(e){console.error('Cooking reality update:',e)}finally{working=false}}
