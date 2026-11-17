@@ -1,0 +1,21 @@
+/* 11.10.8 · reactive cooking notice and backlog */
+.replan1208{border:1px solid #d9dac9;background:#fffefa;border-radius:20px;padding:17px 19px;margin:14px 0;color:#513d30}
+.replan-heading1208{margin-bottom:12px}
+.replan-heading1208 span{font-size:10px;font-weight:850;letter-spacing:.13em;color:#83986f}
+.replan-heading1208 h3{font-size:21px;line-height:1.2;margin:5px 0;color:#466039}
+.replan-heading1208 p{color:#88735e;font-size:12px;line-height:1.55;margin:7px 0 0}
+.replan-row1208{display:flex;align-items:center;gap:9px;border-top:1px solid #ece5db;padding:12px 0;flex-wrap:wrap}
+.replan-row1208>div{flex:1;min-width:160px}
+.replan-row1208 strong{display:block;font-size:13px;color:#553c2d;line-height:1.4}
+.replan-row1208 small{display:block;font-size:11px;color:#877662;margin-top:3px;line-height:1.4}
+.replan-row1208 button{border:0;border-radius:999px;background:#587448;color:white;font-size:11px;font-weight:850;padding:10px 13px;cursor:pointer}
+.replan-row1208 button.replan-muted1208{background:#f3ebe0;color:#745641}
+.replan-early1208,.replan-backlog1208{border-top:1px solid #eee5d8;padding-top:10px;margin-top:7px}
+.replan-early1208 summary,.replan-backlog1208 summary{font-size:13px;font-weight:800;cursor:pointer;color:#5f7450;padding:5px}
+.replan-backlog1208 p{font-size:12px;line-height:1.5;color:#846d54}
+.replan-backlog1208>div{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #eee6d8;padding:12px 3px;gap:10px}
+.replan-backlog1208>div b{font-size:12px;flex:1}
+.replan-backlog1208>div small{font-size:10px;color:#877a6d}
+.replan-backlog1208>div button,.replan-undo1208{border:1px solid #e3d5c6;background:#faf4ec;color:#755640;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:750;cursor:pointer}
+.replan-undo1208{margin-top:8px}
+@media(max-width:760px){.replan1208{padding:14px 13px;border-radius:17px}.replan-row1208 button{flex:1;min-width:118px}.replan-backlog1208>div{flex-wrap:wrap}.replan-backlog1208>div small{min-width:65px}}
