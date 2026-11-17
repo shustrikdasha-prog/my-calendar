@@ -254,6 +254,31 @@ function reconcileMissed(){
 }
 const renderCalendarBefore=renderCalendar;
 renderCalendar=function(){reconcileMissed();renderCalendarBefore();renderPanel()};
+function noticeToday(){
+ const host=document.getElementById('dashboard1198');
+ const old=document.getElementById('replanHome1208');old?.remove();
+ if(!host)return;
+ const w=weekStart(todayISO());
+ const events=(state.replanStack1208?.[w]||[]).filter(x=>x.automatic);
+ const hidden=Number(state.replanNoticeHidden1208?.[w]||0);
+ if(events.length<=hidden)return;
+ const banner=document.createElement('div');
+ banner.id='replanHome1208';banner.className='replan-home1208';
+ banner.innerHTML='<div><b>Меню перестроено после переноса готовки</b><p>Перенесли заготовки и связанные блюда. Даты покупок проверены, ничего не списано. Изменения можно посмотреть и отменить.</p></div>'+
+ '<button type="button" data-replan-view>Посмотреть →</button>'+
+ '<button type="button" data-replan-hide aria-label="Скрыть уведомление">×</button>';
+ host.insertBefore(banner,host.firstChild);
+ banner.querySelector('[data-replan-view]').onclick=()=>{
+  document.querySelector('[data-tab="calendar"]')?.click();
+  document.getElementById('reactivePlan1208')?.scrollIntoView({block:'start',behavior:'smooth'});
+ };
+ banner.querySelector('[data-replan-hide]').onclick=()=>{
+  state.replanNoticeHidden1208??={};state.replanNoticeHidden1208[w]=events.length;
+  save();noticeToday();
+ };
+}
+const renderTodayBefore=renderToday;
+renderToday=function(){renderTodayBefore();noticeToday()};
 document.querySelectorAll('.footer').forEach(e=>e.textContent='Версия 11.10.8');
 // Sync completion can occur after the first render. React only to confirmed
 // cloud restoration, never to an incomplete local snapshot.
