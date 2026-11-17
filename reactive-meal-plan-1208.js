@@ -40,7 +40,7 @@ function makeDraft(w,j){
  // Past consumed or explicitly recorded meals mean there may have been a real cook;
  // never infer a missed batch in that situation.
  if((j.uses||[]).some(u=>u.date<today&&
-     (isDone(mealKeyOf(u.date,u.slot))||state.mealConsumed?.[mealKeyOf(u.date,u.slot)]))){
+     (isDone(mealKeyOf(u.date,u.slot))||state.mealConsumed?.[mealKeyOf(u.date,u.slot)]||state.actualMeals?.[u.date+':'+u.slot]))){
   return {blocked:'Одно из блюд этой партии уже отмечено съеденным. Сначала отметь фактическую готовку, чтобы не создать дубликаты.'};
  }
  const scratch=new Map();
@@ -68,8 +68,14 @@ function makeDraft(w,j){
   for(let d=tomorrow;d<=WEEKEND(w);d=addDays(d,1)){
    const candidate=read(d,u.slot);
    if(!candidate||isDone(mealKeyOf(d,u.slot))||
-      state.mealConsumed?.[mealKeyOf(d,u.slot)]||candidate.readyId)continue;
+      state.mealConsumed?.[mealKeyOf(d,u.slot)]||state.actualMeals?.[d+':'+u.slot]||candidate.readyId)continue;
    if(candidate.recipeId===j.id)continue;
+   // Don't place the same dish at both lunch and dinner on one day.
+   const otherSlot=u.slot===1?3:1;
+   if(read(d,otherSlot)?.recipeId===j.id)continue;
+   // Respect explicit office bought-lunch decisions and manual lunch transfers.
+   if(u.slot===1&&state.lunchMode1201?.[d]?.mode==='buy')continue;
+   if(state.lunchTransfers1202?.[d])continue;
    destination={date:d,slot:u.slot,old:candidate};break;
   }
   if(!destination){
@@ -111,7 +117,7 @@ function movePlan(w,j,automatic=false){
  state.replanUndo1208??={};
  // Undo only the most recent shift, until another replan.
  const beforeShop=clone(state.shopDates?.[w]||null);
- state.replanUndo1208[w]={oldJob:clone(j),newJob:clone(d.projected),beforeShop,
+ state.replanUndo1208[w]={oldJob:clone(j),newJob:clone(d.projected),beforeShop,automatic,
    changes:clone(d.edits),carryIds:d.carry.map(x=>x.id),at:new Date().toISOString()};
  for(const e of d.edits)dayBy(w,e.date).meals[e.slot]=clone(e.after);
  const index=plans(w).findIndex(x=>x.id===j.id&&x.date===j.date);
@@ -183,6 +189,7 @@ function backlogMarkup(w){
 function panelHTML(w){
  const today=todayISO(),late=missed(w),upcoming=plannedEarly(w);
  const undo=state.replanUndo1208?.[w];
+ const autoCount=(state.replanStack1208?.[w]||[]).filter(x=>x.automatic).length;
  const heads=late.map(j=>{
   const name=recipes()[j.id]?.name||j.id;
   return '<div class="replan-row1208"><div><strong>'+esc(name)+'</strong><small>План: '+esc(strDate(j.date))+' · '+j.count+' порц. Готовка не отмечена.</small></div>'+
@@ -195,6 +202,7 @@ function panelHTML(w){
  if(!heads&&!early&&!undo&&!pending().some(x=>weekStart(x.from)===w))return '';
  return '<section id="reactivePlan1208" class="replan1208"><div class="replan-heading1208"><span>УМНЫЙ ПЛАН ГОТОВКИ</span><h3>'+ (heads?'Готовка сдвинулась?':'Готовка под контролем')+'</h3>'+
  '<p>'+(heads?'Если партия не была приготовлена в назначенный день, приложение подберёт новую дату и переставит блюда без потери истории. Неотмеченная готовка не всегда означает пропущенную — выбери действие.':
+ autoCount?'Пропущенная по отметкам готовка автоматически перенесена на текущий день. Вместе с ней перенесены несъеденные блюда; вытесненные позиции сохранены ниже. Если ты на самом деле готовила — отмени перенос и отметь готовку.':
  'Приготовила раньше срока? Отметь фактическую готовку — новые порции появятся в холодильнике, а повторная готовка не потребуется.')+'</p></div>'+
  heads+early+(undo?'<button type="button" class="replan-undo1208" id="replanUndo1208">↶ Отменить последний перенос</button>':'')+backlogMarkup(w)+'</section>';
 }
