@@ -77,9 +77,12 @@ function replacementFor(date,used,excluded){
  // and are not silently debited or marked as consumed.
  const quick=Object.values(recipes()).filter(r=>r.id&&r.id!==excluded&&r.steps?.length&&r.ingredients?.length&&!state.dislikedRecipes?.[r.id]&&safeQuickMinutes(r)<=15&&
   !/пудинг|десерт|сырник|каша|запеканк|йогурт|молоч|творог/i.test(r.name));
- quick.sort((a,b)=>Number(hasIngredients(b))-Number(hasIngredients(a))||a.name.localeCompare(b.name,'ru'));
- const r=quick[0];
- if(r)return {meal:{title:r.name,recipeId:r.id,kcal:0},detail:'быстрый вариант: '+r.name+(!hasIngredients(r)?' (проверь покупки)':'')};
+ quick.sort((a,b)=>Number(hasIngredients(b))-Number(hasIngredients(a))||
+  (Number(used[a.id]||0)-Number(used[b.id]||0))*100||
+  a.name.localeCompare(b.name,'ru'));
+ const unused=quick.find(r=>!used[r.id]),r=unused||quick[0];
+ if(r){used[r.id]=(used[r.id]||0)+1;return {meal:{title:r.name,recipeId:r.id,kcal:0},detail:'быстрый вариант: '+r.name+(!hasIngredients(r)?' (проверь покупки)':'')}}
+
  return null;
 }
 function postpone(week,from,automatic=false){
