@@ -324,7 +324,7 @@ batchesForWeek=function(w=current){
   // This permits an earlier cooked meal to be eaten on the next cooking day,
   // and avoids inventing duplicates after a meal is replaced.
   for(const use of (Array.isArray(plan.uses)?plan.uses:[])){
-   const day=ww.days.find(d=>d.date===use.date);
+   const day=ww.days.find(d=>d.date===use.date)||state.weeks?.[weekStart(use.date)]?.days?.find(d=>d.date===use.date);
    const meal=day?.meals?.[use.slot];
    if(meal?.recipeId===plan.id&&!meal.readyId&&!meal.outside&&!isDone('meal:'+use.date+':'+use.slot)&&use.date>=plan.date)uses.push({date:use.date,slot:use.slot});
   }
