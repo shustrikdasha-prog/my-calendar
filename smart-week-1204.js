@@ -332,7 +332,8 @@ batchesForWeek=function(w=current){
   result.push({id:plan.id,recipe:all[plan.id],date:plan.date,uses,count:uses.length,freeze:uses.filter(u=>dayIndex(u.date)-dayIndex(plan.date)>2).length,key:'cook:'+plan.date+':'+plan.id});
  }
  // Non-planner recipes remain managed by the existing system, without duplicating generated recipes.
- const existing=originalBatches(w).filter(j=>!plannedIds.has(j.id)&&!j.uses.some(u=>u.slot===1&&state.lunchMode1201?.[u.date]?.mode==='buy'));
+ const crossWeekIds=new Set((state.smartBatches1204?.[addDays(w,7)]?.jobs||[]).filter(p=>p.date>=w&&p.date<addDays(w,7)).map(p=>p.id));
+ const existing=originalBatches(w).filter(j=>!plannedIds.has(j.id)&&!crossWeekIds.has(j.id)&&!j.uses.some(u=>u.slot===1&&state.lunchMode1201?.[u.date]?.mode==='buy'));
  return [...existing,...result].sort((a,b)=>a.date.localeCompare(b.date)||a.recipe.name.localeCompare(b.recipe.name,'ru'));
 };
 const formerCalendar=renderCalendar;
