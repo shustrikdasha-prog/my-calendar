@@ -1,0 +1,14 @@
+/* 11.10.9 Sunday advance prep */
+.prep-next-1213{background:#eaf0df;color:#425739;border:1px solid #d0ddc5;border-radius:18px;margin:10px 0 18px;padding:17px 18px}
+.prep-next-head1213>span{display:block;color:#748568;font-weight:900;letter-spacing:.13em;font-size:10px}
+.prep-next-head1213 h3{font-size:20px;line-height:1.25;margin:5px 0 6px}
+.prep-next-head1213 p{font-size:12px;line-height:1.55;color:#6a7a60;margin:0 0 12px}
+.prep-next-item1213{display:flex;align-items:center;gap:9px;border-top:1px solid #d6e1ce;padding:12px 0}
+.prep-next-item1213>div{flex:1;min-width:0}
+.prep-next-item1213 b{display:block;font-size:13px;line-height:1.4}
+.prep-next-item1213 small{display:block;font-size:11px;color:#728467;margin-top:4px}
+.prep-next-1213 button{border:1px solid #bed0b2;border-radius:99px;background:#fffefa;color:#4d6843;font-size:11px;font-weight:800;padding:10px 11px;white-space:nowrap;cursor:pointer}
+.prep-next-1213 .prep-next-primary1213{border-color:#536d45;background:#536d45;color:#fff}
+.prep-next-actions1213{display:flex;gap:12px;align-items:center;margin-top:9px}
+.prep-next-actions1213 span{font-size:11px;line-height:1.4;color:#738166}
+@media(max-width:760px){.prep-next-1213{padding:13px}.prep-next-item1213{gap:5px;flex-wrap:wrap}.prep-next-item1213>div{flex-basis:100%}.prep-next-item1213 button{flex:1}.prep-next-actions1213{align-items:flex-start;flex-direction:column;gap:5px}}
